@@ -1,1 +1,1 @@
-"""Database package placeholder for the next project stage."""
+"""Database session and metadata helpers."""
