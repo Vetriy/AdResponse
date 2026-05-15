@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
+from app.core.config import settings
+from app.llama.client import LlamaClientError, LlamaCppClient
 from app.models import KnowledgeBaseItem
+from app.services.prompt_builder import PromptContext, build_llama_messages
 
 
 @dataclass(frozen=True)
@@ -9,6 +12,7 @@ class GeneratedChatResponse:
     clarifying_questions: list[str]
     handover_offered: bool
     status: str
+    source: str = "local_rules"
 
 
 MISSING_INFO_QUESTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
@@ -99,4 +103,46 @@ def generate_fallback_response(
         clarifying_questions=questions,
         handover_offered=handover_offered,
         status="needs_clarification" if questions else "draft",
+        source="local_rules",
+    )
+
+
+def generate_chat_response(
+    text: str,
+    category: str,
+    emotional_tone: str,
+    knowledge_items: list[KnowledgeBaseItem],
+    llama_client: LlamaCppClient | None = None,
+) -> GeneratedChatResponse:
+    fallback = generate_fallback_response(text, category, emotional_tone, knowledge_items)
+
+    if not settings.use_llama:
+        return fallback
+
+    try:
+        client = llama_client or LlamaCppClient(
+            endpoint_url=settings.llama_base_url,
+            model_name=settings.llama_model_name,
+            timeout_seconds=settings.llama_timeout_seconds,
+        )
+        messages = build_llama_messages(
+            PromptContext(
+                client_message=text,
+                category=category,
+                emotional_tone=emotional_tone,
+                knowledge_items=knowledge_items,
+                clarifying_questions=fallback.clarifying_questions,
+                handover_recommended=fallback.handover_offered,
+            )
+        )
+        llama_text = client.chat(messages)
+    except LlamaClientError:
+        return fallback
+
+    return GeneratedChatResponse(
+        text=llama_text,
+        clarifying_questions=fallback.clarifying_questions,
+        handover_offered=fallback.handover_offered,
+        status=fallback.status,
+        source="local_llama_cpp",
     )

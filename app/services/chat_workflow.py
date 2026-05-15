@@ -12,7 +12,7 @@ from app.models import (
 )
 from app.services.classification import classify_request
 from app.services.knowledge_base import get_category_by_name, select_knowledge_items
-from app.services.response_generation import generate_fallback_response
+from app.services.response_generation import generate_chat_response
 from app.services.sentiment import analyze_sentiment
 
 
@@ -49,7 +49,7 @@ def process_client_message(db: Session, content: str, conversation_id: int | Non
     sentiment = analyze_sentiment(content)
     category = get_category_by_name(db, classification.category)
     knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
-    generated = generate_fallback_response(content, classification.category, sentiment.emotional_tone, knowledge_items)
+    generated = generate_chat_response(content, classification.category, sentiment.emotional_tone, knowledge_items)
 
     client_message = Message(
         conversation_id=conversation.id,
@@ -91,7 +91,7 @@ def process_client_message(db: Session, content: str, conversation_id: int | Non
         GeneratedResponse(
             appeal=appeal,
             response_text=generated.text,
-            source="local_rules",
+            source=generated.source,
             status=generated.status,
         )
     )

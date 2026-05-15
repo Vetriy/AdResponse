@@ -1,1 +1,1 @@
-"""llama.cpp integration placeholder for a later stage."""
+"""Local llama.cpp HTTP integration."""
