@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero section-grid">
+    <div class="hero__content">
+      <span class="badge badge--lavender">Дипломный веб-сервис</span>
+      <h1>Первичный ответ на обращения клиентов рекламного агентства</h1>
+      <p>
+        Основа приложения для приема сообщений, анализа запроса и подготовки аккуратного ответа
+        на базе локальной инфраструктуры.
+      </p>
+      <div class="actions">
+        <a class="button button--primary" href="/chat/">Открыть чат</a>
+        <a class="button button--secondary" href="/manager/">Панель менеджера</a>
+      </div>
+    </div>
+    <div class="hero-panel card">
+      <div class="status-row">
+        <span class="status-dot status-dot--mint"></span>
+        <strong>Этап 1</strong>
+        <span>готовится каркас</span>
+      </div>
+      <div class="flow-list">
+        <div>
+          <span>01</span>
+          <p>Клиент отправляет обращение</p>
+        </div>
+        <div>
+          <span>02</span>
+          <p>Система определяет категорию и тон</p>
+        </div>
+        <div>
+          <span>03</span>
+          <p>Менеджер видит сохраненный контекст</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section">
+    <div class="section-heading">
+      <span class="eyebrow">Модули</span>
+      <h2>Фундамент для следующих этапов</h2>
+    </div>
+    <div class="card-grid">
+      <article class="card accent-blue">
+        <h3>Клиентский чат</h3>
+        <p>Будущая точка входа для сообщения клиента и уточняющих вопросов.</p>
+      </article>
+      <article class="card accent-mint">
+        <h3>Панель менеджера</h3>
+        <p>Место для просмотра обращений, статусов и истории диалога.</p>
+      </article>
+      <article class="card accent-peach">
+        <h3>База знаний</h3>
+        <p>Раздел для подготовленных комментариев и правил ответов.</p>
+      </article>
+    </div>
+  </section>
+{% endblock %}

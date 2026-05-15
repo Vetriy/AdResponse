@@ -82,3 +82,47 @@ Before making large changes:
 5. Summarize changed files.
 
 Do not rewrite the entire project unless explicitly asked.
+
+## UI and visual design requirements
+
+The project must have a clean, modern, thesis-friendly interface in soft pastel colors.
+
+Design style:
+- pastel color palette;
+- light background;
+- soft shadows;
+- rounded cards and buttons;
+- calm advertising agency aesthetic;
+- no aggressive colors;
+- no dark cyberpunk style;
+- no default unstyled HTML;
+- responsive layout for desktop and mobile;
+- readable typography;
+- enough spacing between blocks;
+- accessible color contrast.
+
+Preferred colors:
+- warm off-white background;
+- pastel lavender;
+- pastel blue;
+- soft mint;
+- light peach;
+- muted gray text.
+
+Frontend restrictions:
+- Do not use React.
+- Do not use Next.js.
+- Do not use Tailwind CDN.
+- Do not use Bootstrap CDN.
+- Do not use external Google Fonts.
+- Do not use external icon libraries from CDN.
+- Use local CSS files only.
+- Use system fonts.
+- Use HTML, CSS, Jinja2 templates, and Vanilla JavaScript only.
+
+Required pages must look visually consistent:
+- home page;
+- client chat page;
+- manager dashboard;
+- appeal detail page;
+- admin knowledge base pages.

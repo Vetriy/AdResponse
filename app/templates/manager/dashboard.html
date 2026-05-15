@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--mint">Менеджер</span>
+    <h1>Панель обращений</h1>
+    <p>Заготовка рабочего экрана для контроля входящих запросов и передачи сложных диалогов человеку.</p>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="metric-card card">
+      <span>Новые обращения</span>
+      <strong>0</strong>
+    </article>
+    <article class="metric-card card">
+      <span>Требуют уточнения</span>
+      <strong>0</strong>
+    </article>
+    <article class="metric-card card">
+      <span>Переданы менеджеру</span>
+      <strong>0</strong>
+    </article>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-card__header">
+      <h2>Список обращений</h2>
+      <span class="badge badge--blue">placeholder</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Клиент</th>
+            <th>Категория</th>
+            <th>Тон</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Пример клиента</td>
+            <td>консультация</td>
+            <td><span class="badge badge--mint">нейтральный</span></td>
+            <td>макет</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

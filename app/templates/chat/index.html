@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--blue">Клиент</span>
+    <h1>Клиентский чат</h1>
+    <p>Пока это визуальный прототип. Отправка сообщений и хранение диалога появятся на следующих этапах.</p>
+  </section>
+
+  <section class="chat-layout">
+    <div class="chat-window card">
+      <div class="chat-header">
+        <div>
+          <strong>Диалог с агентством</strong>
+          <span>Черновой сценарий общения</span>
+        </div>
+        <span class="badge badge--mint">онлайн</span>
+      </div>
+
+      <div class="chat-messages" aria-label="Пример сообщений">
+        <div class="chat-bubble chat-bubble--client">
+          Добрый день! Хотим запустить рекламу для новой услуги и понять порядок работ.
+        </div>
+        <div class="chat-bubble chat-bubble--system">
+          Спасибо за обращение. На следующем этапе система сможет уточнить нишу, регион и желаемый срок запуска.
+        </div>
+      </div>
+
+      <form class="form chat-form">
+        <label for="message">Сообщение клиента</label>
+        <textarea id="message" rows="4" placeholder="Введите текст обращения" disabled></textarea>
+        <button class="button button--primary" type="button" disabled>Отправить позже</button>
+      </form>
+    </div>
+
+    <aside class="card side-panel">
+      <h2>Будущая обработка</h2>
+      <div class="stack">
+        <span class="badge badge--lavender">категория</span>
+        <span class="badge badge--peach">эмоциональный тон</span>
+        <span class="badge badge--mint">контекст менеджера</span>
+      </div>
+      <p>Здесь будет отображаться результат первичного анализа и подсказки для продолжения диалога.</p>
+    </aside>
+  </section>
+{% endblock %}
