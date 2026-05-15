@@ -143,12 +143,14 @@ def upsert_comments(db: Session, categories: dict[str, Category]) -> None:
             if item is None:
                 item = KnowledgeBaseItem(
                     category_id=category.id,
+                    emotional_tone="any",
                     title=title,
                     content=content,
                     priority=priority,
                 )
                 db.add(item)
             else:
+                item.emotional_tone = item.emotional_tone or "any"
                 item.content = content
                 item.priority = priority
                 item.is_active = True

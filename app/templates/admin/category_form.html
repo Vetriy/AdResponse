@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--peach">Категории</span>
+    <h1>{{ page_title }}</h1>
+    <p>Категории используются локальной классификацией и помогают выбирать подготовленные комментарии менеджера.</p>
+  </section>
+
+  <section class="form-layout">
+    <form class="card form admin-form" method="post" action="{{ form_action }}">
+      {% if error %}
+        <p class="form-hint">{{ error }}</p>
+      {% endif %}
+
+      <label for="slug">Slug</label>
+      <input id="slug" name="slug" value="{{ category.slug if category else '' }}" placeholder="service-cost" required>
+
+      <label for="name">Название</label>
+      <input id="name" name="name" value="{{ category.name if category else '' }}" placeholder="service cost" required>
+
+      <label for="description">Описание</label>
+      <textarea id="description" name="description" rows="4" placeholder="Краткое назначение категории">{{ category.description if category else '' }}</textarea>
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="is_active" value="true" {% if category is none or category.is_active %}checked{% endif %}>
+        <span>Активна</span>
+      </label>
+
+      <div class="actions">
+        <button class="button button--primary" type="submit">Сохранить</button>
+        <a class="button button--secondary" href="/admin/knowledge-base">Отмена</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

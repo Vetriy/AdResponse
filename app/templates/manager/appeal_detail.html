@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--mint">Менеджер</span>
+    <h1>Обращение{% if appeal %} #{{ appeal.id }}{% endif %}</h1>
+    <p>История диалога сохраняется полностью: сообщения клиента, системы и менеджера отображаются в одном контексте.</p>
+  </section>
+
+  {% if db_error %}
+    <section class="empty-state card">
+      <h2>База данных недоступна</h2>
+      <p>{{ db_error }}</p>
+    </section>
+  {% elif not appeal %}
+    <section class="empty-state card">
+      <h2>Обращение не найдено</h2>
+      <p>Проверьте ссылку или вернитесь к списку обращений.</p>
+      <a class="button button--secondary" href="/manager/">К списку</a>
+    </section>
+  {% else %}
+    {% if error %}
+      <p class="form-hint form-hint--card">{{ error }}</p>
+    {% endif %}
+
+    <section class="appeal-layout">
+      <div class="card chat-window">
+        <div class="chat-header">
+          <div>
+            <strong>Диалог</strong>
+            <span>{{ appeal.conversation.title or "Клиентский чат" }}</span>
+          </div>
+          <span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span>
+        </div>
+
+        <div class="chat-messages chat-messages--manager">
+          {% for message in appeal.conversation.messages %}
+            <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
+              <small>{{ message.sender_type }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+              {{ message.content }}
+            </div>
+          {% else %}
+            <div class="chat-empty">
+              <strong>История пуста</strong>
+              <span>Сообщения появятся после клиентского обращения.</span>
+            </div>
+          {% endfor %}
+        </div>
+
+        <form class="form chat-form" method="post" action="/manager/appeals/{{ appeal.id }}/messages">
+          <label for="manager-message">Ручной ответ менеджера</label>
+          <textarea id="manager-message" name="content" rows="4" placeholder="Введите ответ клиенту"></textarea>
+          <button class="button button--primary" type="submit">Отправить ответ</button>
+        </form>
+      </div>
+
+      <aside class="card side-panel">
+        <h2>Сводка</h2>
+        <div class="detail-list">
+          <span>Категория</span>
+          <strong>{{ appeal.category.name if appeal.category else appeal.request_category or "other" }}</strong>
+          <span>Эмоциональный тон</span>
+          <strong>{{ appeal.emotional_tone or "neutral" }}</strong>
+          <span>Менеджер</span>
+          <strong>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</strong>
+          <span>Создано</span>
+          <strong>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</strong>
+        </div>
+
+        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/accept">
+          <button class="button button--secondary" type="submit">Принять обращение</button>
+        </form>
+
+        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/status">
+          <label for="status">Изменить статус</label>
+          <select id="status" name="status">
+            {% for status in statuses %}
+              <option value="{{ status }}" {% if appeal.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+          <button class="button button--primary" type="submit">Сохранить статус</button>
+        </form>
+
+        {% if appeal.generated_responses %}
+          <div class="mini-section">
+            <h3>Автоответы</h3>
+            {% for response in appeal.generated_responses %}
+              <p><span class="badge badge--lavender">{{ response.source }}</span></p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </aside>
+    </section>
+  {% endif %}
+{% endblock %}

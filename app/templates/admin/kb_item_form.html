@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--peach">База знаний</span>
+    <h1>{{ page_title }}</h1>
+    <p>Комментарий должен быть проверенной формулировкой менеджера без неподтвержденных цен, сроков или обещаний результата.</p>
+  </section>
+
+  <section class="form-layout">
+    <form class="card form admin-form" method="post" action="{{ form_action }}">
+      {% if error %}
+        <p class="form-hint">{{ error }}</p>
+      {% endif %}
+
+      <label for="category_id">Категория</label>
+      <select id="category_id" name="category_id" required>
+        {% for category in categories %}
+          <option value="{{ category.id }}" {% if item and item.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="emotional_tone">Эмоциональный тон</label>
+      <select id="emotional_tone" name="emotional_tone">
+        {% for tone in tones %}
+          <option value="{{ tone }}" {% if item and item.emotional_tone == tone %}selected{% endif %}>{{ tone }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="title">Заголовок</label>
+      <input id="title" name="title" value="{{ item.title if item else '' }}" placeholder="Clarify budget" required>
+
+      <label for="content">Текст комментария</label>
+      <textarea id="content" name="content" rows="7" placeholder="Подготовленная формулировка менеджера" required>{{ item.content if item else '' }}</textarea>
+
+      <label for="priority">Приоритет</label>
+      <input id="priority" name="priority" type="number" min="1" max="1000" value="{{ item.priority if item else 100 }}">
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="is_active" value="true" {% if item is none or item.is_active %}checked{% endif %}>
+        <span>Активен</span>
+      </label>
+
+      <div class="actions">
+        <button class="button button--primary" type="submit">Сохранить</button>
+        <a class="button button--secondary" href="/admin/knowledge-base">Отмена</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

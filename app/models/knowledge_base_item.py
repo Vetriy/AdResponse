@@ -9,6 +9,7 @@ class KnowledgeBaseItem(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    emotional_tone: Mapped[str] = mapped_column(String(50), default="any", nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

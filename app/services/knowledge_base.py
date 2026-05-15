@@ -22,8 +22,13 @@ def select_knowledge_items(
         .where(
             KnowledgeBaseItem.category_id == category.id,
             KnowledgeBaseItem.is_active.is_(True),
+            KnowledgeBaseItem.emotional_tone.in_((emotional_tone, "any")),
         )
-        .order_by(KnowledgeBaseItem.priority.asc(), KnowledgeBaseItem.created_at.asc())
+        .order_by(
+            (KnowledgeBaseItem.emotional_tone == emotional_tone).desc(),
+            KnowledgeBaseItem.priority.asc(),
+            KnowledgeBaseItem.created_at.asc(),
+        )
         .limit(limit)
     )
     items = list(db.scalars(statement))

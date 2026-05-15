@@ -4,48 +4,102 @@
   <section class="page-title">
     <span class="badge badge--mint">Менеджер</span>
     <h1>Панель обращений</h1>
-    <p>Заготовка рабочего экрана для контроля входящих запросов и передачи сложных диалогов человеку.</p>
+    <p>Рабочий экран для просмотра клиентских запросов, статусов, тональности и передачи диалога менеджеру.</p>
   </section>
 
-  <section class="dashboard-grid">
-    <article class="metric-card card">
-      <span>Новые обращения</span>
-      <strong>0</strong>
-    </article>
-    <article class="metric-card card">
-      <span>Требуют уточнения</span>
-      <strong>0</strong>
-    </article>
-    <article class="metric-card card">
-      <span>Переданы менеджеру</span>
-      <strong>0</strong>
-    </article>
-  </section>
+  {% if db_error %}
+    <section class="empty-state card">
+      <h2>База данных недоступна</h2>
+      <p>{{ db_error }}</p>
+    </section>
+  {% else %}
+    <section class="dashboard-grid">
+      <article class="metric-card card">
+        <span>Новые обращения</span>
+        <strong>{{ metrics.new }}</strong>
+      </article>
+      <article class="metric-card card">
+        <span>Требуют уточнения</span>
+        <strong>{{ metrics.needs_clarification }}</strong>
+      </article>
+      <article class="metric-card card">
+        <span>Переданы менеджеру</span>
+        <strong>{{ metrics.needs_manager }}</strong>
+      </article>
+    </section>
 
-  <section class="card table-card">
-    <div class="table-card__header">
-      <h2>Список обращений</h2>
-      <span class="badge badge--blue">placeholder</span>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Клиент</th>
-            <th>Категория</th>
-            <th>Тон</th>
-            <th>Статус</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Пример клиента</td>
-            <td>консультация</td>
-            <td><span class="badge badge--mint">нейтральный</span></td>
-            <td>макет</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+    <section class="card table-card">
+      <div class="table-card__header">
+        <h2>Список обращений</h2>
+        <span class="badge badge--blue">{{ appeals|length }}</span>
+      </div>
+
+      <form class="filter-bar" method="get" action="/manager/">
+        <label>
+          <span>Статус</span>
+          <select name="status">
+            <option value="">Все</option>
+            {% for status in statuses %}
+              <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Категория</span>
+          <select name="category">
+            <option value="">Все</option>
+            {% for category in categories %}
+              <option value="{{ category.id }}" {% if filters.category == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Тон</span>
+          <select name="tone">
+            <option value="">Все</option>
+            {% for tone in tones %}
+              <option value="{{ tone }}" {% if filters.tone == tone %}selected{% endif %}>{{ tone }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="button button--secondary" type="submit">Фильтровать</button>
+      </form>
+
+      {% if appeals %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Категория</th>
+                <th>Тон</th>
+                <th>Статус</th>
+                <th>Создано</th>
+                <th>Менеджер</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for appeal in appeals %}
+                <tr>
+                  <td>#{{ appeal.id }}</td>
+                  <td>{{ appeal.category.name if appeal.category else appeal.request_category or "other" }}</td>
+                  <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ appeal.emotional_tone or "neutral" }}</span></td>
+                  <td><span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span></td>
+                  <td>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                  <td>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</td>
+                  <td><a class="button button--secondary button--small" href="/manager/appeals/{{ appeal.id }}">Открыть</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state empty-state--compact">
+          <h2>Обращений пока нет</h2>
+          <p>Когда клиент отправит сообщение в чате, обращение появится здесь.</p>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
 {% endblock %}
