@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, get_engine
 from app.models import Category, KnowledgeBaseItem
 
 
@@ -155,6 +155,7 @@ def upsert_comments(db: Session, categories: dict[str, Category]) -> None:
 
 
 def seed() -> None:
+    get_engine()
     with SessionLocal() as db:
         categories = upsert_categories(db)
         upsert_comments(db, categories)

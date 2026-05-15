@@ -4,43 +4,44 @@
   <section class="page-title">
     <span class="badge badge--blue">Клиент</span>
     <h1>Клиентский чат</h1>
-    <p>Пока это визуальный прототип. Отправка сообщений и хранение диалога появятся на следующих этапах.</p>
+    <p>Опишите задачу, а локальные правила определят категорию, эмоциональный тон и подготовят аккуратный первичный ответ.</p>
   </section>
 
   <section class="chat-layout">
-    <div class="chat-window card">
+    <div class="chat-window card" data-chat-widget>
       <div class="chat-header">
         <div>
-          <strong>Диалог с агентством</strong>
-          <span>Черновой сценарий общения</span>
+          <strong>Онлайн-помощник агентства</strong>
+          <span data-chat-status>Готов принять обращение</span>
         </div>
         <span class="badge badge--mint">онлайн</span>
       </div>
 
-      <div class="chat-messages" aria-label="Пример сообщений">
-        <div class="chat-bubble chat-bubble--client">
-          Добрый день! Хотим запустить рекламу для новой услуги и понять порядок работ.
-        </div>
-        <div class="chat-bubble chat-bubble--system">
-          Спасибо за обращение. На следующем этапе система сможет уточнить нишу, регион и желаемый срок запуска.
+      <div class="chat-messages" aria-live="polite" aria-label="История сообщений" data-chat-messages>
+        <div class="chat-empty">
+          <strong>Добрый день!</strong>
+          <span>Напишите, что нужно рекламировать или какая проблема возникла в кампании.</span>
         </div>
       </div>
 
-      <form class="form chat-form">
+      <form class="form chat-form" data-chat-form>
         <label for="message">Сообщение клиента</label>
-        <textarea id="message" rows="4" placeholder="Введите текст обращения" disabled></textarea>
-        <button class="button button--primary" type="button" disabled>Отправить позже</button>
+        <div class="chat-input-row">
+          <textarea id="message" rows="3" placeholder="Например: Хотим запустить рекламу для салона красоты в Москве" data-chat-input></textarea>
+          <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
+        </div>
+        <p class="form-hint" data-chat-error hidden></p>
       </form>
     </div>
 
     <aside class="card side-panel">
-      <h2>Будущая обработка</h2>
+      <h2>Локальный анализ</h2>
       <div class="stack">
-        <span class="badge badge--lavender">категория</span>
-        <span class="badge badge--peach">эмоциональный тон</span>
-        <span class="badge badge--mint">контекст менеджера</span>
+        <span class="badge badge--lavender" data-chat-category>категория: нет</span>
+        <span class="badge badge--peach" data-chat-tone>тон: нет</span>
+        <span class="badge badge--mint" data-chat-handover>менеджер: по ситуации</span>
       </div>
-      <p>Здесь будет отображаться результат первичного анализа и подсказки для продолжения диалога.</p>
+      <p>Ответ формируется только по локальным правилам и подготовленным комментариям из базы знаний. Цены, сроки и гарантии не придумываются.</p>
     </aside>
   </section>
 {% endblock %}
