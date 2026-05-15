@@ -3,7 +3,7 @@
 {% block content %}
   <section class="page-title">
     <span class="badge badge--blue">Клиент</span>
-    <h1>Обращение{% if appeal %} #{{ appeal.id }}{% endif %}</h1>
+    <h1>Обращение{% if appeal %} №{{ appeal.id }}{% endif %}</h1>
     <p>Полная история вашего диалога сохраняется в личном кабинете.</p>
   </section>
   {% if not appeal %}
@@ -20,6 +20,17 @@
           <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
             <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
             {{ message.content }}
+            {% if message.attachments %}
+              <div class="attachment-list">
+                {% for attachment in message.attachments %}
+                  {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
+                    <a href="/chat/attachments/{{ attachment.id }}"><img src="/chat/attachments/{{ attachment.id }}" alt="{{ attachment.original_filename }}"></a>
+                  {% else %}
+                    <a class="attachment-link" href="/chat/attachments/{{ attachment.id }}">{{ attachment.original_filename }}</a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
         {% endfor %}
       </div>
@@ -29,6 +40,8 @@
           <textarea id="message" rows="3" placeholder="Напишите уточнение или ответ менеджеру" data-chat-input></textarea>
           <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
         </div>
+        <label class="file-field" for="attachments">Прикрепить файлы</label>
+        <input id="attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" data-chat-files>
         <p class="form-hint" data-chat-error hidden></p>
       </form>
     </div>

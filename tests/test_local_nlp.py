@@ -54,7 +54,7 @@ def test_fallback_response_uses_manager_comments_and_safe_rules() -> None:
     assert result.source == "local_rules"
     assert result.handover_offered is False
     assert "Уточните нишу" in result.text
-    assert "Чтобы продолжить" in result.text
+    assert "Уточните, пожалуйста" in result.text
     assert "подготовленных комментариев менеджера" not in result.text.lower()
 
 
@@ -67,5 +67,24 @@ def test_fallback_response_offers_handover_for_negative_request() -> None:
     )
 
     assert result.handover_offered is True
-    assert "Понимаем ваше беспокойство" in result.text
-    assert "передать диалог менеджеру" in result.text
+    assert "недовольство" in result.text
+    assert "передадим диалог менеджеру" in result.text
+
+
+def test_fallback_response_varies_by_emotional_tone() -> None:
+    anxious = generate_fallback_response(
+        text="Переживаем из-за отчета",
+        category="general question",
+        emotional_tone="anxious",
+        knowledge_items=[],
+    )
+    negative = generate_fallback_response(
+        text="Отчет плохой, заявок нет",
+        category="low number of leads",
+        emotional_tone="negative",
+        knowledge_items=[],
+    )
+
+    assert anxious.text != negative.text
+    assert "спокойно проверить по шагам" in anxious.text
+    assert "отделим эмоции от фактов" in negative.text

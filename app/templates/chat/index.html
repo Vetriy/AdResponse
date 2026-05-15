@@ -8,7 +8,7 @@
   </section>
 
   <section class="chat-layout">
-    <div class="chat-window card" data-chat-widget data-storage="off">
+    <div class="chat-window card" data-chat-widget data-storage="off" data-report-id="{{ report.id if report else '' }}">
       <div class="chat-header">
         <div>
           <strong>Онлайн-помощник агентства</strong>
@@ -25,11 +25,16 @@
       </div>
 
       <form class="form chat-form" data-chat-form>
+        {% if report %}
+          <p class="form-hint form-hint--neutral">Вопрос будет связан с отчетом: {{ report.title }}</p>
+        {% endif %}
         <label for="message">Сообщение клиента</label>
         <div class="chat-input-row">
           <textarea id="message" rows="3" placeholder="Например: Хотим запустить рекламу для салона красоты в Москве" data-chat-input></textarea>
           <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
         </div>
+        <label class="file-field" for="attachments">Прикрепить файлы</label>
+        <input id="attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" data-chat-files>
         <p class="form-hint" data-chat-error hidden></p>
       </form>
     </div>
@@ -41,7 +46,7 @@
         <span class="badge badge--peach" data-chat-tone>тон: нет</span>
         <span class="badge badge--mint" data-chat-handover>менеджер: по ситуации</span>
       </div>
-      <p>Ответ формируется только по локальным правилам и подготовленным комментариям из базы знаний. Цены, сроки и гарантии не придумываются.</p>
+      <p>Помощник быстро собирает вводные, снижает напряжение в сложных ситуациях и не придумывает цены, сроки или гарантии.</p>
     </aside>
   </section>
 {% endblock %}

@@ -70,7 +70,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>Обращение</th>
                 <th>Клиент</th>
                 <th>Категория</th>
                 <th>Тон</th>
@@ -83,7 +83,7 @@
             <tbody>
               {% for appeal in appeals %}
                 <tr>
-                  <td>#{{ appeal.id }}</td>
+                  <td>№{{ appeal.id }}</td>
                   <td>{{ client_identifier(appeal) }}</td>
                   <td>{{ appeal_category_label(appeal) }}</td>
                   <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span></td>

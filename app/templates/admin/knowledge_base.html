@@ -21,39 +21,27 @@
         </div>
 
         {% if items %}
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Категория</th>
-                  <th>Тон</th>
-                  <th>Комментарий</th>
-                  <th>Приоритет</th>
-                  <th>Статус</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for item in items %}
-                  <tr>
-                    <td class="cell-wrap">{{ category_label(item.category.name) }}</td>
-                    <td class="cell-wrap"><span class="badge tone-{{ item.emotional_tone }}">{{ tone_label(item.emotional_tone) }}</span></td>
-                    <td class="cell-wrap cell-main">
-                      <strong>{{ item.title }}</strong>
-                      <p class="table-note">{{ item.content }}</p>
-                    </td>
-                    <td>{{ item.priority }}</td>
-                    <td><span class="badge {{ 'badge--mint' if item.is_active else 'badge--peach' }}">{{ "активен" if item.is_active else "выключен" }}</span></td>
-                    <td class="table-actions">
-                      <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>
-                      <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete">
-                        <button class="button button--ghost button--small" type="submit">Удалить</button>
-                      </form>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="kb-card-list">
+            {% for item in items %}
+              <article class="kb-item-card">
+                <div class="kb-item-card__body">
+                  <div class="stack">
+                    <span class="badge badge--blue">{{ category_label(item.category.name) }}</span>
+                    <span class="badge tone-{{ item.emotional_tone }}">{{ tone_label(item.emotional_tone) }}</span>
+                    <span class="badge {{ 'badge--mint' if item.is_active else 'badge--peach' }}">{{ "активен" if item.is_active else "выключен" }}</span>
+                  </div>
+                  <h3>{{ item.title }}</h3>
+                  <p>{{ item.content }}</p>
+                  <span class="table-note">Приоритет: {{ item.priority }}</span>
+                </div>
+                <div class="kb-item-card__actions">
+                  <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>
+                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete">
+                    <button class="button button--ghost button--small" type="submit">Удалить</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
           </div>
         {% else %}
           <div class="empty-state empty-state--compact">

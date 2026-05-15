@@ -3,7 +3,7 @@
 {% block content %}
   <section class="page-title">
     <span class="badge badge--mint">Менеджер</span>
-    <h1>Обращение{% if appeal %} #{{ appeal.id }}{% endif %}</h1>
+    <h1>Обращение{% if appeal %} №{{ appeal.id }}{% endif %}</h1>
     <p>История диалога сохраняется полностью: сообщения клиента, системы и менеджера отображаются в одном контексте.</p>
   </section>
 
@@ -38,6 +38,17 @@
             <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
               <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
               {{ message.content }}
+              {% if message.attachments %}
+                <div class="attachment-list">
+                  {% for attachment in message.attachments %}
+                    {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
+                      <a href="/chat/attachments/{{ attachment.id }}"><img src="/chat/attachments/{{ attachment.id }}" alt="{{ attachment.original_filename }}"></a>
+                    {% else %}
+                      <a class="attachment-link" href="/chat/attachments/{{ attachment.id }}">{{ attachment.original_filename }}</a>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
             </div>
           {% else %}
             <div class="chat-empty">
@@ -47,9 +58,11 @@
           {% endfor %}
         </div>
 
-        <form class="form chat-form" method="post" action="/manager/appeals/{{ appeal.id }}/messages">
+        <form class="form chat-form" method="post" action="/manager/appeals/{{ appeal.id }}/messages" enctype="multipart/form-data">
           <label for="manager-message">Ручной ответ менеджера</label>
           <textarea id="manager-message" name="content" rows="4" placeholder="Введите ответ клиенту"></textarea>
+          <label class="file-field" for="manager-attachments">Прикрепить файлы</label>
+          <input id="manager-attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
           <button class="button button--primary" type="submit">Отправить ответ</button>
         </form>
       </div>
@@ -71,6 +84,10 @@
 
         <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/accept">
           <button class="button button--secondary" type="submit">Принять обращение</button>
+          <p class="form-hint form-hint--neutral">Принять обращение — закрепить диалог за собой и продолжить ручной ответ клиенту.</p>
+          {% if appeal.assigned_manager %}
+            <p class="form-hint form-hint--neutral">Сейчас обращение принял: {{ appeal.assigned_manager.full_name }}.</p>
+          {% endif %}
         </form>
 
         <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/status">
@@ -85,9 +102,26 @@
 
         {% if appeal.generated_responses %}
           <div class="mini-section">
-            <h3>Автоответы</h3>
+            <h3>Автоматические ответы системы</h3>
             {% for response in appeal.generated_responses %}
-              <p><span class="badge badge--lavender">{{ response.source }}</span></p>
+              <p><span class="badge badge--lavender">{{ source_label(response.source) }}</span></p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/reports" enctype="multipart/form-data">
+          <label for="report-title">Загрузить отчет клиенту</label>
+          <input id="report-title" name="title" placeholder="Например: Отчет за апрель">
+          <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
+          <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+          <button class="button button--secondary" type="submit">Загрузить отчет</button>
+        </form>
+
+        {% if appeal.advertising_reports %}
+          <div class="mini-section">
+            <h3>Отчеты по рекламе</h3>
+            {% for report in appeal.advertising_reports %}
+              <p><strong>{{ report.title }}</strong><br><span>{{ report.original_filename }}</span></p>
             {% endfor %}
           </div>
         {% endif %}

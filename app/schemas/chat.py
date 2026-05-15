@@ -9,7 +9,17 @@ class ConversationCreateResponse(BaseModel):
 
 class ChatMessageCreate(BaseModel):
     conversation_id: int | None = None
+    report_id: int | None = None
     content: str = Field(min_length=1, max_length=4000)
+
+
+class AttachmentRead(BaseModel):
+    id: int
+    original_filename: str
+    content_type: str | None = None
+    size_bytes: int
+    url: str
+    is_image: bool
 
 
 class ChatMessageRead(BaseModel):
@@ -17,6 +27,7 @@ class ChatMessageRead(BaseModel):
     sender_type: str
     content: str
     created_at: datetime
+    attachments: list[AttachmentRead] = Field(default_factory=list)
 
 
 class ChatSendResponse(BaseModel):

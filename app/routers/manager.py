@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import Appeal, Category, ClientSession, Conversation, Message, User
+from app.models import AdvertisingReport, Appeal, Category, ClientSession, Conversation, Message, MessageAttachment, User
+from app.services.uploads import save_upload_file, validate_upload_filename
 
 templates = create_templates()
 router = APIRouter(prefix="/manager", tags=["manager dashboard"])
@@ -94,7 +95,7 @@ async def manager_dashboard(
         metrics = {
             "new": sum(1 for appeal in all_appeals if appeal.status == "new"),
             "needs_clarification": sum(1 for appeal in all_appeals if appeal.status == "needs_clarification"),
-            "needs_manager": sum(1 for appeal in all_appeals if appeal.status == "needs_manager"),
+            "needs_manager": sum(1 for appeal in all_appeals if appeal.status in {"needs_manager", "handover_requested"}),
         }
 
         statement = (
@@ -184,7 +185,9 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 selectinload(Appeal.assigned_manager),
                 selectinload(Appeal.generated_responses),
                 selectinload(Appeal.handover_requests),
+                selectinload(Appeal.advertising_reports),
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
+                selectinload(Appeal.conversation).selectinload(Conversation.messages).selectinload(Message.attachments),
                 selectinload(Appeal.conversation).selectinload(Conversation.client_session).selectinload(ClientSession.user),
             )
         )
@@ -273,8 +276,8 @@ async def update_appeal_status(request: Request, appeal_id: int) -> RedirectResp
 
 @router.post("/appeals/{appeal_id}/messages")
 async def send_manager_message(request: Request, appeal_id: int) -> RedirectResponse:
-    form = await read_form(request)
-    content = form.get("content", "").strip()
+    form = await request.form()
+    content = str(form.get("content", "")).strip()
     if not content:
         return redirect_to(f"/manager/appeals/{appeal_id}?error=Введите текст ответа")
 
@@ -285,10 +288,79 @@ async def send_manager_message(request: Request, appeal_id: int) -> RedirectResp
             return current_user
         appeal = db.scalar(select(Appeal).where(Appeal.id == appeal_id).options(selectinload(Appeal.conversation)))
         if appeal and appeal.conversation and (current_user.role == "admin" or appeal.assigned_manager_id in {None, current_user.id}):
-            db.add(Message(conversation_id=appeal.conversation.id, sender_type="manager", content=content))
+            files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
+            for file in files:
+                validate_upload_filename(file.filename)
+            message = Message(conversation_id=appeal.conversation.id, sender_type="manager", content=content)
+            db.add(message)
+            db.flush()
+            for file in files:
+                stored = await save_upload_file(file, "messages")
+                db.add(
+                    MessageAttachment(
+                        message_id=message.id,
+                        uploaded_by_user_id=current_user.id,
+                        original_filename=stored.original_filename,
+                        stored_filename=stored.stored_filename,
+                        stored_path=stored.stored_path,
+                        content_type=stored.content_type,
+                        size_bytes=stored.size_bytes,
+                    )
+                )
             if appeal.status not in {"closed"}:
                 appeal.status = "manager_answered"
             db.commit()
+    except ValueError as error:
+        db.rollback()
+        return redirect_to(f"/manager/appeals/{appeal_id}?error={str(error)}")
+    finally:
+        db.close()
+    return redirect_to(f"/manager/appeals/{appeal_id}")
+
+
+@router.post("/appeals/{appeal_id}/reports")
+async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResponse:
+    form = await request.form()
+    title = str(form.get("title", "")).strip()
+    description = str(form.get("description", "")).strip()
+    file = form.get("report_file")
+    if not title or not hasattr(file, "filename") or not hasattr(file, "read") or not file.filename:
+        return redirect_to(f"/manager/appeals/{appeal_id}?error=Укажите название отчета и файл")
+
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        appeal = db.scalar(
+            select(Appeal)
+            .where(Appeal.id == appeal_id)
+            .options(selectinload(Appeal.conversation).selectinload(Conversation.client_session))
+        )
+        if appeal is None or appeal.conversation.client_session.user_id is None:
+            return redirect_to(f"/manager/appeals/{appeal_id}?error=Клиент обращения не найден")
+        if current_user.role == "manager" and appeal.assigned_manager_id not in {None, current_user.id}:
+            return redirect_to(f"/manager/appeals/{appeal_id}?error=Обращение закреплено за другим менеджером")
+        validate_upload_filename(file.filename)
+        stored = await save_upload_file(file, "reports")
+        db.add(
+            AdvertisingReport(
+                client_user_id=appeal.conversation.client_session.user_id,
+                appeal_id=appeal.id,
+                uploaded_by_user_id=current_user.id,
+                title=title,
+                description=description or None,
+                original_filename=stored.original_filename,
+                stored_filename=stored.stored_filename,
+                stored_path=stored.stored_path,
+                content_type=stored.content_type,
+                size_bytes=stored.size_bytes,
+            )
+        )
+        db.commit()
+    except ValueError as error:
+        db.rollback()
+        return redirect_to(f"/manager/appeals/{appeal_id}?error={str(error)}")
     finally:
         db.close()
     return redirect_to(f"/manager/appeals/{appeal_id}")

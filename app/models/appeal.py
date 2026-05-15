@@ -28,3 +28,4 @@ class Appeal(TimestampMixin, Base):
         back_populates="appeal",
         cascade="all, delete-orphan",
     )
+    advertising_reports: Mapped[list["AdvertisingReport"]] = relationship(back_populates="appeal")

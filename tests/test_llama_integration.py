@@ -54,7 +54,7 @@ def test_llama_failure_uses_local_fallback(monkeypatch) -> None:
 
     assert result.source == "local_rules"
     assert result.handover_offered is True
-    assert "можем передать диалог менеджеру" in result.text
+    assert "передадим диалог менеджеру" in result.text
 
 
 def test_llama_success_uses_local_llama_source(monkeypatch) -> None:

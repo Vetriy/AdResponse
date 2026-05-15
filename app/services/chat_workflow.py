@@ -42,6 +42,7 @@ def get_conversation(db: Session, conversation_id: int) -> Conversation | None:
         .where(Conversation.id == conversation_id)
         .options(
             selectinload(Conversation.messages),
+            selectinload(Conversation.messages).selectinload(Message.attachments),
             selectinload(Conversation.appeal),
         )
     )
@@ -52,6 +53,7 @@ def process_client_message(
     content: str,
     conversation_id: int | None = None,
     user: User | None = None,
+    report_context: str | None = None,
 ) -> tuple[Conversation, Message, Message, Appeal, list[str], bool]:
     conversation = get_conversation(db, conversation_id) if conversation_id else None
     if conversation is None:
@@ -63,7 +65,13 @@ def process_client_message(
     sentiment = analyze_sentiment(content)
     category = get_category_by_name(db, classification.category)
     knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
-    generated = generate_chat_response(content, classification.category, sentiment.emotional_tone, knowledge_items)
+    generated = generate_chat_response(
+        content,
+        classification.category,
+        sentiment.emotional_tone,
+        knowledge_items,
+        report_context=report_context,
+    )
 
     client_message = Message(
         conversation_id=conversation.id,

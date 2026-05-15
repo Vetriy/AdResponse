@@ -6,6 +6,8 @@ from app.services.labels import (
     category_label,
     client_identifier,
     sender_label,
+    role_label,
+    source_label,
     status_label,
     tone_label,
 )
@@ -22,6 +24,8 @@ def create_templates() -> Jinja2Templates:
         category_label=category_label,
         client_identifier=client_identifier,
         sender_label=sender_label,
+        role_label=role_label,
+        source_label=source_label,
         status_label=status_label,
         tone_label=tone_label,
     )

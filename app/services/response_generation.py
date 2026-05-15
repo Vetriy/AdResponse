@@ -71,35 +71,46 @@ def generate_fallback_response(
     category: str,
     emotional_tone: str,
     knowledge_items: list[KnowledgeBaseItem],
+    report_context: str | None = None,
 ) -> GeneratedChatResponse:
     questions = build_clarifying_questions(text, category)
     handover_offered = category in COMPLEX_CATEGORIES or emotional_tone in NEGATIVE_TONES
     parts: list[str] = []
 
-    if emotional_tone in NEGATIVE_TONES:
-        parts.append(
-            "Понимаем ваше беспокойство. Давайте спокойно разберем ситуацию по фактам и сохраним контекст обращения для менеджера."
-        )
+    if category == "contact manager request":
+        parts.append("Передать диалог менеджеру можно. Чтобы он быстрее включился в задачу, соберем короткий контекст прямо здесь.")
+    elif emotional_tone == "anxious":
+        parts.append("Ситуацию можно спокойно проверить по шагам: сначала уточним вводные, затем будет проще понять, где нужен разбор.")
+    elif emotional_tone in NEGATIVE_TONES:
+        parts.append("Вижу, что результат вызывает недовольство. Давайте отделим эмоции от фактов и быстро соберем данные для предметной проверки.")
+    elif emotional_tone == "interested":
+        parts.append("Хороший запрос, давайте сразу сузим задачу, чтобы ответ был полезным и без лишних предположений.")
     else:
-        parts.append("Спасибо за обращение. Мы зафиксировали ваш запрос и можем подготовить первичный ответ по имеющимся данным.")
+        parts.append("Разберем ваш вопрос по делу: для точного ответа важно понять несколько параметров кампании или задачи.")
+
+    if report_context:
+        parts.append(f"Вижу, что вопрос связан с отчетом: {report_context}.")
 
     if knowledge_items:
-        parts.append("По вашему обращению можем сориентировать так:")
+        if emotional_tone in NEGATIVE_TONES:
+            parts.append("По таким ситуациям обычно сначала проверяют:")
+        else:
+            parts.append("Сейчас можно ориентироваться на следующее:")
         parts.extend(f"- {item.content}" for item in knowledge_items[:2])
     else:
         parts.append(
-            "Для точного ответа нужно немного больше вводных. Мы не называем цены, сроки или гарантии без подтвержденных данных."
+            "Без исходных данных нельзя корректно назвать цену, срок или гарантировать рекламный результат, но можно быстро собрать недостающие вводные."
         )
 
     if questions:
-        parts.append("Чтобы продолжить, уточните, пожалуйста:")
+        parts.append("Уточните, пожалуйста:")
         parts.extend(f"{index}. {question}" for index, question in enumerate(questions, start=1))
 
     if handover_offered:
         if category == "contact manager request":
-            parts.append("Мы можем передать обращение менеджеру. Если удобно, укажите способ связи и краткий контекст задачи.")
+            parts.append("Укажите удобный способ связи и кратко опишите задачу: так менеджер получит диалог уже с подготовленными вводными.")
         else:
-            parts.append("Если вопрос требует детального разбора, мы можем передать диалог менеджеру с сохранением истории.")
+            parts.append("Если нужно, передадим диалог менеджеру с сохранением истории: ему не придется заново собирать контекст.")
 
     return GeneratedChatResponse(
         text="\n".join(parts),
@@ -116,8 +127,9 @@ def generate_chat_response(
     emotional_tone: str,
     knowledge_items: list[KnowledgeBaseItem],
     llama_client: LlamaCppClient | None = None,
+    report_context: str | None = None,
 ) -> GeneratedChatResponse:
-    fallback = generate_fallback_response(text, category, emotional_tone, knowledge_items)
+    fallback = generate_fallback_response(text, category, emotional_tone, knowledge_items, report_context=report_context)
 
     if not settings.use_llama:
         return fallback
@@ -130,7 +142,7 @@ def generate_chat_response(
         )
         messages = build_llama_messages(
             PromptContext(
-                client_message=text,
+                client_message=f"{text}\n\nКонтекст отчета: {report_context}" if report_context else text,
                 category=category,
                 emotional_tone=emotional_tone,
                 knowledge_items=knowledge_items,

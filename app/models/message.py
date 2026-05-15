@@ -18,3 +18,7 @@ class Message(TimestampMixin, Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    attachments: Mapped[list["MessageAttachment"]] = relationship(
+        back_populates="message",
+        cascade="all, delete-orphan",
+    )

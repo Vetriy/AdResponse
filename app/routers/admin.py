@@ -2,7 +2,7 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
@@ -10,7 +10,7 @@ from app.core.auth import login_redirect, require_role
 from app.core.security import hash_password
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import Category, KnowledgeBaseItem, User
+from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
 
 templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
@@ -61,18 +61,29 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
         user = ensure_admin(request, db)
         if not hasattr(user, "id"):
             return user
-        users_count = db.scalar(select(User).count()) if False else len(list(db.scalars(select(User.id))))
-        categories_count = len(list(db.scalars(select(Category.id))))
-        items_count = len(list(db.scalars(select(KnowledgeBaseItem.id))))
+        stats = {
+            "users": db.scalar(select(func.count(User.id))) or 0,
+            "clients": db.scalar(select(func.count(User.id)).where(User.role == "client")) or 0,
+            "managers": db.scalar(select(func.count(User.id)).where(User.role == "manager")) or 0,
+            "admins": db.scalar(select(func.count(User.id)).where(User.role == "admin")) or 0,
+            "appeals": db.scalar(select(func.count(Appeal.id))) or 0,
+            "new_appeals": db.scalar(select(func.count(Appeal.id)).where(Appeal.status == "new")) or 0,
+            "manager_attention": db.scalar(
+                select(func.count(Appeal.id)).where(Appeal.status.in_(("needs_manager", "handover_requested", "needs_clarification")))
+            )
+            or 0,
+            "closed_appeals": db.scalar(select(func.count(Appeal.id)).where(Appeal.status == "closed")) or 0,
+            "comments": db.scalar(select(func.count(KnowledgeBaseItem.id))) or 0,
+            "active_comments": db.scalar(select(func.count(KnowledgeBaseItem.id)).where(KnowledgeBaseItem.is_active.is_(True))) or 0,
+            "reports": db.scalar(select(func.count(AdvertisingReport.id))) or 0,
+        }
         return templates.TemplateResponse(
             request,
             "admin/dashboard.html",
             {
                 "page_title": "Админ-панель",
                 "active_page": "admin",
-                "users_count": users_count,
-                "categories_count": categories_count,
-                "items_count": items_count,
+                "stats": stats,
             },
         )
     finally:

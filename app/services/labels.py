@@ -8,7 +8,7 @@ STATUS_LABELS = {
     "needs_clarification": "Требуется уточнение",
     "handover_requested": "Запрошен менеджер",
     "needs_manager": "Требуется менеджер",
-    "assigned_to_manager": "Передано менеджеру",
+    "assigned_to_manager": "В работе у менеджера",
     "accepted": "Передано менеджеру",
     "manager_answered": "Менеджер ответил",
     "closed": "Закрыто",
@@ -45,6 +45,18 @@ SENDER_LABELS = {
     "manager": "Менеджер",
 }
 
+ROLE_LABELS = {
+    "admin": "Администратор",
+    "manager": "Менеджер",
+    "client": "Клиент",
+}
+
+SOURCE_LABELS = {
+    "local_rules": "Автоматический ответ",
+    "local_llama_cpp": "Локальная языковая модель",
+    "local_llm": "Локальная языковая модель",
+}
+
 
 def status_label(value: str | None) -> str:
     return STATUS_LABELS.get(value or "", value or "Не указан")
@@ -60,6 +72,14 @@ def category_label(value: str | None) -> str:
 
 def sender_label(value: str | None) -> str:
     return SENDER_LABELS.get(value or "", value or "Сообщение")
+
+
+def role_label(value: str | None) -> str:
+    return ROLE_LABELS.get(value or "", value or "Роль не указана")
+
+
+def source_label(value: str | None) -> str:
+    return SOURCE_LABELS.get(value or "", value or "Автоматический ответ")
 
 
 def appeal_category_label(appeal: Appeal | None) -> str:
@@ -83,10 +103,10 @@ def client_identifier(appeal: Appeal | None) -> str:
             return user.username
         if user.email:
             return user.email
-        return f"Клиент #{user.id}"
+        return f"Клиент №{user.id}"
 
     if session.client_name:
         return session.client_name
     if session.client_contact:
         return session.client_contact
-    return f"Клиент #{session.id}"
+    return f"Клиент №{session.id}"

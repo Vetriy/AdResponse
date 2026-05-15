@@ -34,6 +34,7 @@ Expected:
 - tone is shown as `Нейтральный` or `Заинтересованный`;
 - response asks clarifying questions and does not invent exact price.
 - response does not expose internal phrases about prepared manager comments, fallback, llama.cpp or system rules.
+- response wording is friendly and differs from anxious or negative responses.
 
 ## 2. Campaign launch request
 
@@ -138,27 +139,65 @@ Expected:
 
 - manager dashboard shows a clear client identifier;
 - assigned manager becomes the current manager;
+- helper text explains that accepting means закрепить диалог за собой;
 - manager message appears in dialogue history;
 - appeal status is shown as `Менеджер ответил`.
+- automatic response source is shown as `Автоматический ответ`, not `local_rules`.
 
-## 9. Admin adds prepared manager comment
+## 9. File upload in dialogue
+
+Steps:
+
+1. Login as `client`.
+2. Open `/chat/`.
+3. Send a message with a `.png` or `.pdf` attachment under 10 MB.
+4. Login as `manager`.
+5. Open the appeal and send a manual answer with a `.txt` or `.xlsx` attachment.
+
+Expected:
+
+- attachments are saved locally in `storage/uploads/`;
+- images show a preview in the dialogue;
+- documents show a filename link;
+- executable files are rejected.
+
+## 10. Manager uploads advertising report
+
+Steps:
+
+1. Login as `manager`.
+2. Open an appeal for a client.
+3. In `Загрузить отчет клиенту`, enter title, description and upload a `.pdf` or `.xlsx`.
+4. Login as `client`.
+5. Open `/client/dashboard`.
+6. Open the report or click `Задать вопрос`.
+
+Expected:
+
+- report appears in `Отчеты по рекламе`;
+- client can download/open the report;
+- report question creates a new appeal with report title/description as context.
+
+## 11. Admin adds prepared manager comment
 
 Steps:
 
 1. Logout from manager account.
 2. Login as `admin`.
-3. Open `/admin/knowledge-base`.
-4. Click `Добавить` for comments.
-5. Select category, tone, title and priority.
-6. Save.
+3. Open `/admin/dashboard` and review statistics cards.
+4. Open `/admin/knowledge-base`.
+5. Click `Добавить` for comments.
+6. Select category, tone, title and priority.
+7. Save.
 
 Expected:
 
+- role labels are shown as `Клиент`, `Менеджер`, `Администратор`;
 - comment appears in the list;
 - active comment can be selected by response generation for matching category and tone.
-- prepared comments block is wide and readable without horizontal scrolling at normal desktop width.
+- prepared comments are readable as wide cards without horizontal scrolling at normal desktop width.
 
-## 10. Fallback when llama.cpp is disabled
+## 12. Fallback when llama.cpp is disabled
 
 Set:
 
@@ -170,7 +209,7 @@ Expected:
 
 - `generated_responses.source = local_rules`.
 
-## 11. Fallback when llama.cpp is unavailable
+## 13. Fallback when llama.cpp is unavailable
 
 Set:
 

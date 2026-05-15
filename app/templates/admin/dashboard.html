@@ -6,9 +6,25 @@
     <h1>Админ-панель</h1>
     <p>Управление пользователями, категориями и подготовленными комментариями для безопасной генерации ответов.</p>
   </section>
-  <section class="dashboard-grid">
-    <article class="metric-card card"><span>Пользователи</span><strong>{{ users_count }}</strong></article>
-    <article class="metric-card card"><span>Категории</span><strong>{{ categories_count }}</strong></article>
-    <article class="metric-card card"><span>Комментарии</span><strong>{{ items_count }}</strong></article>
+  <section class="dashboard-grid dashboard-grid--wide">
+    <article class="metric-card card"><span>Пользователи</span><strong>{{ stats.users }}</strong></article>
+    <article class="metric-card card"><span>Клиенты</span><strong>{{ stats.clients }}</strong></article>
+    <article class="metric-card card"><span>Менеджеры</span><strong>{{ stats.managers }}</strong></article>
+    <article class="metric-card card"><span>Администраторы</span><strong>{{ stats.admins }}</strong></article>
+    <article class="metric-card card"><span>Обращения</span><strong>{{ stats.appeals }}</strong></article>
+    <article class="metric-card card"><span>Новые обращения</span><strong>{{ stats.new_appeals }}</strong></article>
+    <article class="metric-card card"><span>Требуют внимания менеджера</span><strong>{{ stats.manager_attention }}</strong></article>
+    <article class="metric-card card"><span>Закрытые обращения</span><strong>{{ stats.closed_appeals }}</strong></article>
+    <article class="metric-card card"><span>Подготовленные комментарии</span><strong>{{ stats.comments }}</strong></article>
+    <article class="metric-card card"><span>Активные комментарии</span><strong>{{ stats.active_comments }}</strong></article>
+    <article class="metric-card card"><span>Загруженные отчеты</span><strong>{{ stats.reports }}</strong></article>
+  </section>
+  <section class="card table-card">
+    <div class="table-card__header">
+      <h2>Рабочие разделы</h2>
+    </div>
+    <div class="actions">
+      <a class="button button--secondary" href="/manager/dashboard">Обращения</a>
+    </div>
   </section>
 {% endblock %}

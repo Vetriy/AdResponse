@@ -20,7 +20,7 @@
               <td>{{ user.username }}</td>
               <td>{{ user.email }}</td>
               <td>{{ user.full_name }}</td>
-              <td><span class="badge role-{{ user.role }}">{{ user.role }}</span></td>
+              <td><span class="badge role-{{ user.role }}">{{ role_label(user.role) }}</span></td>
               <td><span class="badge {{ 'badge--mint' if user.is_active else 'badge--peach' }}">{{ "активен" if user.is_active else "выключен" }}</span></td>
               <td class="table-actions">
                 <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/edit">Править</a>

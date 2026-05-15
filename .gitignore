@@ -26,6 +26,9 @@ htmlcov/
 *.sqlite3
 *.db-journal
 
+# Local uploaded files
+storage/uploads/
+
 # OS files
 .DS_Store
 

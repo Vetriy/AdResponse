@@ -36,7 +36,7 @@
               <a class="{% if active_page == 'users' %}is-active{% endif %}" href="/admin/users">Пользователи</a>
               <a class="{% if active_page == 'knowledge' %}is-active{% endif %}" href="/admin/knowledge-base">База знаний</a>
             {% endif %}
-            <span class="nav-user">{{ current_user.full_name }} · {{ current_user.role }}</span>
+            <span class="nav-user">{{ current_user.full_name }} · {{ role_label(current_user.role) }}</span>
             <a href="/logout">Выход</a>
           {% else %}
             <a class="{% if active_page == 'login' %}is-active{% endif %}" href="/login">Вход</a>

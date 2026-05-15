@@ -20,3 +20,12 @@ class User(TimestampMixin, Base):
         cascade="save-update, merge",
     )
     client_sessions: Mapped[list["ClientSession"]] = relationship(back_populates="user")
+    message_attachments: Mapped[list["MessageAttachment"]] = relationship(back_populates="uploaded_by")
+    advertising_reports: Mapped[list["AdvertisingReport"]] = relationship(
+        foreign_keys="AdvertisingReport.client_user_id",
+        back_populates="client",
+    )
+    uploaded_reports: Mapped[list["AdvertisingReport"]] = relationship(
+        foreign_keys="AdvertisingReport.uploaded_by_user_id",
+        back_populates="uploaded_by",
+    )
