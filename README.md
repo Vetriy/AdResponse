@@ -1,123 +1,89 @@
 # AdResponse
 
-Интерактивный веб-сервис для первичного ответа на обращения клиентов рекламного агентства. Проект выполняется как дипломная работа и развивается поэтапно: сначала каркас FastAPI и интерфейс, затем база данных, бизнес-логика и локальная интеграция с `llama.cpp`.
+Интерактивный веб-сервис для первичного ответа на обращения клиентов рекламного агентства. Проект подготовлен как демонстрационная часть бакалаврской работы: клиент отправляет сообщение, система сохраняет диалог, классифицирует запрос, определяет эмоциональный тон, выбирает подготовленные комментарии менеджера и формирует первичный ответ локально.
 
-## Текущий этап
+## Возможности
 
-Реализован стартовый каркас приложения, слой базы данных, клиентский чат, локальная NLP-логика и опциональная интеграция с локальным `llama.cpp`:
+- FastAPI backend, Jinja2 templates, HTML/CSS/Vanilla JavaScript.
+- PostgreSQL, SQLAlchemy ORM, Alembic migrations.
+- Клиентский чат с историей сообщений.
+- Детерминированная классификация и анализ тональности.
+- Выбор активных комментариев базы знаний по категории, тону и приоритету.
+- Fallback-генерация без внешних API.
+- Опциональная интеграция с локальным `llama.cpp` через `http://localhost:8080/v1/chat/completions`.
+- Панель менеджера: список обращений, детали диалога, принятие обращения, ручной ответ, смена статуса.
+- Админ-раздел: CRUD категорий и подготовленных комментариев.
 
-- FastAPI-приложение с модульными роутерами;
-- Jinja2-шаблоны;
-- локальные CSS и JavaScript без CDN;
-- страницы: главная, клиентский чат, панель менеджера, база знаний;
-- пастельная адаптивная UI-основа;
-- SQLAlchemy ORM-модели доменной области;
-- Alembic-миграция для PostgreSQL;
-- seed-скрипт с начальными категориями и комментариями базы знаний;
-- детерминированная классификация и анализ тональности;
-- генерация ответа через локальные правила или локальный `llama.cpp`.
-
-## Локальный запуск
-
-Создать и активировать виртуальное окружение:
+## Быстрый запуск
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-Для Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-Установить зависимости:
-
-```bash
 pip install -r requirements.txt
-```
-
-При необходимости создать локальный файл настроек:
-
-```bash
 cp .env.example .env
 ```
 
-Настроить PostgreSQL и указать параметры подключения в `.env`. Можно использовать отдельные переменные `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD` или готовую строку `DATABASE_URL`.
-
-Применить миграции:
+Настройте PostgreSQL в `.env`, затем:
 
 ```bash
 alembic upgrade head
-```
-
-Загрузить начальные категории и подготовленные комментарии:
-
-```bash
 python3 -m app.db.seed
-```
-
-Запустить приложение без `llama.cpp`, только с локальным fallback-ответом:
-
-```bash
 export USE_LLAMA=false
 uvicorn app.main:app --reload
 ```
 
-Для запуска с локальным `llama.cpp` нужно поднять сервер в OpenAI-совместимом режиме на endpoint:
+Откройте:
 
-```text
-http://localhost:8080/v1/chat/completions
-```
-
-Пример запуска приложения с включенным `llama.cpp`:
-
-```bash
-export USE_LLAMA=true
-export LLAMA_BASE_URL=http://localhost:8080/v1/chat/completions
-export LLAMA_MODEL_NAME=local-model
-export LLAMA_TIMEOUT_SECONDS=20
-uvicorn app.main:app --reload
-```
-
-Если `llama.cpp` недоступен, отвечает слишком долго или возвращает некорректный ответ, приложение автоматически использует локальную fallback-генерацию на основе подготовленных комментариев.
-
-Открыть в браузере:
-
-- <http://127.0.0.1:8000/>
 - <http://127.0.0.1:8000/chat/>
 - <http://127.0.0.1:8000/manager/>
 - <http://127.0.0.1:8000/admin/knowledge-base>
 
-## Проверка
+## Переменные окружения
+
+```env
+APP_NAME=AdResponse
+DEBUG=true
+
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=adresponse
+DATABASE_USER=adresponse
+DATABASE_PASSWORD=adresponse
+DATABASE_URL=postgresql+psycopg://adresponse:adresponse@localhost:5432/adresponse
+
+USE_LLAMA=false
+LLAMA_BASE_URL=http://localhost:8080/v1/chat/completions
+LLAMA_MODEL_NAME=local-model
+LLAMA_TIMEOUT_SECONDS=20
+```
+
+## Режимы генерации
+
+Fallback mode: `USE_LLAMA=false`. Ответ строится локально по правилам, категории, эмоциональному тону, уточняющим вопросам и подготовленным комментариям.
+
+llama.cpp mode: `USE_LLAMA=true`. Приложение отправляет запрос только на локальный OpenAI-compatible endpoint `LLAMA_BASE_URL`. Если `llama.cpp` недоступен, сработает fallback.
+
+## Тесты
 
 ```bash
 pytest
+python3 -m compileall app tests alembic
 ```
 
-## Структура
+Тесты не требуют реального `llama.cpp` сервера и не используют внешние облачные сервисы.
 
-```text
-app/
-  main.py
-  core/
-  db/
-  models/
-  schemas/
-  services/
-  routers/
-  templates/
-  static/
-  llama/
-docs/
-tests/
-```
+## Документация
 
-## Ограничения проекта
+- [User guide](docs/user_guide.md)
+- [Developer guide](docs/developer_guide.md)
+- [llama.cpp setup](docs/llama_cpp_setup.md)
+- [Manual testing scenarios](docs/manual_testing_scenarios.md)
+- [Thesis demo checklist](docs/thesis_demo_checklist.md)
 
-- не использовать React, Next.js, Tailwind, Bootstrap и внешние CDN;
-- не использовать внешние облачные LLM API;
-- LLM-интеграция должна работать только локально через `llama.cpp`;
-- PostgreSQL не заменяется на SQLite.
+## Ограничения
+
+- Нет полноценной аутентификации и ролей входа.
+- Нет production-настроек безопасности.
+- NLP-логика простая и детерминированная.
+- llama.cpp модель и файлы модели не входят в репозиторий.
+- Внешние LLM API, React, CDN и облачные AI-сервисы не используются.
