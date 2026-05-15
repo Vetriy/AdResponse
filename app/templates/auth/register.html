@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="auth-layout">
+    <div class="auth-panel">
+      <span class="badge badge--blue">Клиент</span>
+      <h1>Регистрация клиента</h1>
+      <p>Регистрация открыта только для роли клиента. Менеджеров и администраторов создает администратор.</p>
+    </div>
+    <form class="card form admin-form" method="post" action="/register">
+      {% if error %}<p class="form-hint">{{ error }}</p>{% endif %}
+      <label for="username">Логин</label>
+      <input id="username" name="username" value="{{ form.username or '' }}" required>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" value="{{ form.email or '' }}" required>
+      <label for="full_name">Имя</label>
+      <input id="full_name" name="full_name" value="{{ form.full_name or '' }}" required>
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" required>
+      <button class="button button--primary" type="submit">Создать кабинет</button>
+    </form>
+  </section>
+{% endblock %}

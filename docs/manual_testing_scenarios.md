@@ -10,7 +10,15 @@ export USE_LLAMA=false
 uvicorn app.main:app --reload
 ```
 
+Demo accounts:
+
+- `admin` / `admin123`
+- `manager` / `manager123`
+- `client` / `client123`
+
 ## 1. Neutral service cost request
+
+Login as `client`.
 
 Message:
 
@@ -97,11 +105,13 @@ Expected:
 
 Steps:
 
-1. Open `/manager/`.
-2. Open the created appeal.
-3. Click `Принять обращение`.
-4. Enter a manual answer.
-5. Submit.
+1. Logout from client account.
+2. Login as `manager`.
+3. Open `/manager/`.
+4. Open the created appeal.
+5. Click `Принять обращение`.
+6. Enter a manual answer.
+7. Submit.
 
 Expected:
 
@@ -113,10 +123,12 @@ Expected:
 
 Steps:
 
-1. Open `/admin/knowledge-base`.
-2. Click `Добавить` for comments.
-3. Select category, tone, title, text and priority.
-4. Save.
+1. Logout from manager account.
+2. Login as `admin`.
+3. Open `/admin/knowledge-base`.
+4. Click `Добавить` for comments.
+5. Select category, tone, title and priority.
+6. Save.
 
 Expected:
 

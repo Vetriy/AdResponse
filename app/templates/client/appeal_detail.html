@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--blue">Клиент</span>
+    <h1>Обращение{% if appeal %} #{{ appeal.id }}{% endif %}</h1>
+    <p>Полная история вашего диалога сохраняется в личном кабинете.</p>
+  </section>
+  {% if not appeal %}
+    <section class="empty-state card"><h2>Обращение не найдено</h2><p>Оно могло принадлежать другому пользователю.</p></section>
+  {% else %}
+    <section class="card chat-window">
+      <div class="chat-header">
+        <div><strong>История диалога</strong><span>{{ appeal.status }}</span></div>
+        <span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span>
+      </div>
+      <div class="chat-messages chat-messages--manager">
+        {% for message in appeal.conversation.messages %}
+          <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
+            <small>{{ message.sender_type }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+            {{ message.content }}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

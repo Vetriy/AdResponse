@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--peach">Администратор</span>
+    <h1>Админ-панель</h1>
+    <p>Управление пользователями, категориями и подготовленными комментариями для безопасной генерации ответов.</p>
+  </section>
+  <section class="dashboard-grid">
+    <article class="metric-card card"><span>Пользователи</span><strong>{{ users_count }}</strong></article>
+    <article class="metric-card card"><span>Категории</span><strong>{{ categories_count }}</strong></article>
+    <article class="metric-card card"><span>Комментарии</span><strong>{{ items_count }}</strong></article>
+  </section>
+  <section class="card table-card">
+    <div class="actions">
+      <a class="button button--primary" href="/admin/users">Пользователи</a>
+      <a class="button button--secondary" href="/admin/knowledge-base">База знаний</a>
+      <a class="button button--secondary" href="/manager/dashboard">Панель менеджера</a>
+    </div>
+  </section>
+{% endblock %}

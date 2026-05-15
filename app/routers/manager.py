@@ -2,14 +2,15 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.core.auth import login_redirect, require_role
+from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import Appeal, Category, Conversation, Message, User
 
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 router = APIRouter(prefix="/manager", tags=["manager dashboard"])
 
 APPEAL_STATUSES = ("new", "needs_clarification", "needs_manager", "accepted", "manager_answered", "closed")
@@ -35,9 +36,11 @@ def get_or_create_placeholder_manager(db) -> User:
     manager = db.scalar(select(User).where(User.email == PLACEHOLDER_MANAGER_EMAIL))
     if manager is None:
         manager = User(
+            username="manager-placeholder",
             email=PLACEHOLDER_MANAGER_EMAIL,
             full_name="Дежурный менеджер",
             role="manager",
+            hashed_password="not-set",
             is_active=True,
         )
         db.add(manager)
@@ -52,6 +55,8 @@ async def manager_dashboard(
     category: str = "",
     tone: str = "",
 ) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     try:
         db = open_db()
     except Exception as error:
@@ -72,6 +77,9 @@ async def manager_dashboard(
         )
 
     try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
         categories = list(db.scalars(select(Category).order_by(Category.name.asc())))
         all_appeals = list(db.scalars(select(Appeal)))
         metrics = {
@@ -89,6 +97,8 @@ async def manager_dashboard(
             )
             .order_by(Appeal.created_at.desc())
         )
+        if current_user.role == "manager":
+            statement = statement.where((Appeal.assigned_manager_id == current_user.id) | (Appeal.assigned_manager_id.is_(None)))
         if status:
             statement = statement.where(Appeal.status == status)
         if category and category.isdigit():
@@ -134,6 +144,8 @@ async def manager_dashboard(
 
 @router.get("/appeals/{appeal_id}", response_class=HTMLResponse)
 async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     try:
         db = open_db()
     except Exception as db_error:
@@ -151,6 +163,9 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
         )
 
     try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
         appeal = db.scalar(
             select(Appeal)
             .where(Appeal.id == appeal_id)
@@ -162,6 +177,12 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
             )
         )
+        if appeal and current_user.role == "manager" and appeal.assigned_manager_id not in {None, current_user.id}:
+            return templates.TemplateResponse(
+                request,
+                "auth/access_denied.html",
+                {"page_title": "Доступ закрыт", "active_page": "manager"},
+            )
         return templates.TemplateResponse(
             request,
             "manager/appeal_detail.html",
@@ -191,14 +212,26 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
         db.close()
 
 
+@router.get("/dashboard")
+async def manager_dashboard_alias(request: Request, status: str = "", category: str = "", tone: str = ""):
+    return await manager_dashboard(request, status=status, category=category, tone=tone)
+
+
+@router.get("/appeals")
+async def manager_appeals_alias(request: Request, status: str = "", category: str = "", tone: str = ""):
+    return await manager_dashboard(request, status=status, category=category, tone=tone)
+
+
 @router.post("/appeals/{appeal_id}/accept")
-async def accept_appeal(appeal_id: int) -> RedirectResponse:
+async def accept_appeal(request: Request, appeal_id: int) -> RedirectResponse:
     db = open_db()
     try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
         appeal = db.get(Appeal, appeal_id)
         if appeal:
-            manager = get_or_create_placeholder_manager(db)
-            appeal.assigned_manager_id = manager.id
+            appeal.assigned_manager_id = current_user.id
             appeal.status = "accepted"
             db.commit()
     finally:
@@ -215,8 +248,11 @@ async def update_appeal_status(request: Request, appeal_id: int) -> RedirectResp
 
     db = open_db()
     try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
         appeal = db.get(Appeal, appeal_id)
-        if appeal:
+        if appeal and (current_user.role == "admin" or appeal.assigned_manager_id in {None, current_user.id}):
             appeal.status = status
             db.commit()
     finally:
@@ -233,8 +269,11 @@ async def send_manager_message(request: Request, appeal_id: int) -> RedirectResp
 
     db = open_db()
     try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
         appeal = db.scalar(select(Appeal).where(Appeal.id == appeal_id).options(selectinload(Appeal.conversation)))
-        if appeal and appeal.conversation:
+        if appeal and appeal.conversation and (current_user.role == "admin" or appeal.assigned_manager_id in {None, current_user.id}):
             db.add(Message(conversation_id=appeal.conversation.id, sender_type="manager", content=content))
             if appeal.status not in {"closed"}:
                 appeal.status = "manager_answered"

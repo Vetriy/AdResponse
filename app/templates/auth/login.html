@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="auth-layout">
+    <div class="auth-panel">
+      <span class="badge badge--lavender">Личный кабинет</span>
+      <h1>Вход в AdResponse</h1>
+      <p>Войдите как клиент, менеджер или администратор, чтобы открыть свой раздел сервиса.</p>
+    </div>
+    <form class="card form admin-form" method="post" action="/login">
+      {% if error %}<p class="form-hint">{{ error }}</p>{% endif %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="login">Логин или email</label>
+      <input id="login" name="login" placeholder="admin" required>
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" placeholder="admin123" required>
+      <button class="button button--primary" type="submit">Войти</button>
+      <p class="table-note">Нет аккаунта клиента? <a href="/register">Зарегистрироваться</a></p>
+    </form>
+  </section>
+{% endblock %}

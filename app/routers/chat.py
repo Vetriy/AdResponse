@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.core.auth import login_redirect, require_role
+from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import Message
 from app.schemas.chat import (
@@ -15,12 +16,26 @@ from app.schemas.chat import (
 )
 from app.services.chat_workflow import create_conversation, get_conversation, process_client_message
 
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 router = APIRouter(prefix="/chat", tags=["client chat"])
 
 
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request) -> HTMLResponse:
+    try:
+        get_engine()
+        db = SessionLocal()
+    except Exception:
+        if not request.session.get("user"):
+            return login_redirect(request)
+        db = None
+    if db:
+        try:
+            user = require_role(request, db, {"client"})
+            if not hasattr(user, "id"):
+                return user
+        finally:
+            db.close()
     return templates.TemplateResponse(
         request,
         "chat/index.html",
@@ -54,9 +69,12 @@ def get_chat_db():
 
 
 @router.post("/api/conversations", response_model=ConversationCreateResponse)
-def create_chat_conversation(db: Session = Depends(get_chat_db)) -> ConversationCreateResponse:
+def create_chat_conversation(request: Request, db: Session = Depends(get_chat_db)) -> ConversationCreateResponse:
+    user = require_role(request, db, {"client"})
+    if not hasattr(user, "id"):
+        raise HTTPException(status_code=401, detail="Authentication required.")
     try:
-        conversation = create_conversation(db)
+        conversation = create_conversation(db, user)
     except Exception as error:
         raise HTTPException(status_code=503, detail=database_error_message(error)) from error
 
@@ -64,7 +82,10 @@ def create_chat_conversation(db: Session = Depends(get_chat_db)) -> Conversation
 
 
 @router.get("/api/conversations/{conversation_id}", response_model=ConversationHistoryResponse)
-def read_chat_history(conversation_id: int, db: Session = Depends(get_chat_db)) -> ConversationHistoryResponse:
+def read_chat_history(request: Request, conversation_id: int, db: Session = Depends(get_chat_db)) -> ConversationHistoryResponse:
+    user = require_role(request, db, {"client"})
+    if not hasattr(user, "id"):
+        raise HTTPException(status_code=401, detail="Authentication required.")
     try:
         conversation = get_conversation(db, conversation_id)
     except Exception as error:
@@ -72,6 +93,8 @@ def read_chat_history(conversation_id: int, db: Session = Depends(get_chat_db)) 
 
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation was not found.")
+    if conversation.client_session.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
 
     appeal = conversation.appeal
     return ConversationHistoryResponse(
@@ -84,12 +107,16 @@ def read_chat_history(conversation_id: int, db: Session = Depends(get_chat_db)) 
 
 
 @router.post("/api/messages", response_model=ChatSendResponse)
-def send_chat_message(payload: ChatMessageCreate, db: Session = Depends(get_chat_db)) -> ChatSendResponse:
+def send_chat_message(request: Request, payload: ChatMessageCreate, db: Session = Depends(get_chat_db)) -> ChatSendResponse:
+    user = require_role(request, db, {"client"})
+    if not hasattr(user, "id"):
+        raise HTTPException(status_code=401, detail="Authentication required.")
     try:
         conversation, client_message, system_message, appeal, questions, handover_offered = process_client_message(
             db,
             payload.content.strip(),
             payload.conversation_id,
+            user,
         )
     except SQLAlchemyError as error:
         db.rollback()

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--blue">Клиент</span>
+    <h1>Личный кабинет</h1>
+    <p>Здесь отображаются ваши обращения и история диалогов с онлайн-помощником и менеджером.</p>
+  </section>
+  {% if db_error %}
+    <section class="empty-state card"><h2>База данных недоступна</h2><p>{{ db_error }}</p></section>
+  {% else %}
+    <section class="card table-card">
+      <div class="table-card__header">
+        <h2>Мои обращения</h2>
+        <a class="button button--primary" href="/chat/">Новое обращение</a>
+      </div>
+      {% if appeals %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Категория</th><th>Тон</th><th>Статус</th><th>Создано</th><th></th></tr></thead>
+            <tbody>
+              {% for appeal in appeals %}
+                <tr>
+                  <td>#{{ appeal.id }}</td>
+                  <td>{{ appeal.category.name if appeal.category else appeal.request_category or "other" }}</td>
+                  <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ appeal.emotional_tone or "neutral" }}</span></td>
+                  <td><span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span></td>
+                  <td>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                  <td><a class="button button--secondary button--small" href="/client/appeals/{{ appeal.id }}">Открыть</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state empty-state--compact">
+          <h2>Обращений пока нет</h2>
+          <p>Создайте первое обращение через клиентский чат.</p>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

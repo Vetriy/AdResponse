@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--peach">Администратор</span>
+    <h1>Пользователи</h1>
+    <p>Управление клиентами, менеджерами и администраторами сервиса.</p>
+  </section>
+  <section class="card table-card">
+    <div class="table-card__header">
+      <h2>Все пользователи</h2>
+      <a class="button button--primary" href="/admin/users/create">Создать</a>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Логин</th><th>Email</th><th>Имя</th><th>Роль</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ user.username }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.full_name }}</td>
+              <td><span class="badge role-{{ user.role }}">{{ user.role }}</span></td>
+              <td><span class="badge {{ 'badge--mint' if user.is_active else 'badge--peach' }}">{{ "активен" if user.is_active else "выключен" }}</span></td>
+              <td class="table-actions">
+                <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/edit">Править</a>
+                <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/reset-password">Пароль</a>
+                <form method="post" action="/admin/users/{{ user.id }}/toggle-active"><button class="button button--ghost button--small" type="submit">Вкл/выкл</button></form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

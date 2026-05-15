@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--peach">Пользователи</span>
+    <h1>{{ page_title }}</h1>
+    <p>Администратор может создавать клиентов, менеджеров и других администраторов.</p>
+  </section>
+  <section class="form-layout">
+    <form class="card form admin-form" method="post" action="{{ form_action }}">
+      {% if error %}<p class="form-hint">{{ error }}</p>{% endif %}
+      <label for="username">Логин</label>
+      <input id="username" name="username" value="{{ user.username if user else '' }}" required>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" value="{{ user.email if user else '' }}" required>
+      <label for="full_name">Имя</label>
+      <input id="full_name" name="full_name" value="{{ user.full_name if user else '' }}" required>
+      <label for="role">Роль</label>
+      <select id="role" name="role">{% for role in roles %}<option value="{{ role }}" {% if user and user.role == role %}selected{% endif %}>{{ role }}</option>{% endfor %}</select>
+      {% if not user %}
+        <label for="password">Пароль</label>
+        <input id="password" name="password" type="password" required>
+      {% endif %}
+      <label class="checkbox-row"><input type="checkbox" name="is_active" value="true" {% if user is none or user.is_active %}checked{% endif %}><span>Активен</span></label>
+      <div class="actions"><button class="button button--primary" type="submit">Сохранить</button><a class="button button--secondary" href="/admin/users">Отмена</a></div>
+    </form>
+  </section>
+{% endblock %}

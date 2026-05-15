@@ -2,18 +2,21 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
+from app.core.auth import login_redirect, require_role
+from app.core.security import hash_password
+from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import Category, KnowledgeBaseItem
+from app.models import Category, KnowledgeBaseItem, User
 
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
 
 EMOTIONAL_TONES = ("any", "neutral", "interested", "anxious", "disappointed", "irritated", "negative")
+USER_ROLES = ("client", "manager", "admin")
 
 
 def redirect_to(path: str) -> RedirectResponse:
@@ -45,8 +48,41 @@ def slugify(value: str) -> str:
     return value.strip().lower().replace(" ", "-").replace("_", "-")
 
 
+def ensure_admin(request: Request, db):
+    return require_role(request, db, {"admin"})
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        user = ensure_admin(request, db)
+        if not hasattr(user, "id"):
+            return user
+        users_count = db.scalar(select(User).count()) if False else len(list(db.scalars(select(User.id))))
+        categories_count = len(list(db.scalars(select(Category.id))))
+        items_count = len(list(db.scalars(select(KnowledgeBaseItem.id))))
+        return templates.TemplateResponse(
+            request,
+            "admin/dashboard.html",
+            {
+                "page_title": "Админ-панель",
+                "active_page": "admin",
+                "users_count": users_count,
+                "categories_count": categories_count,
+                "items_count": items_count,
+            },
+        )
+    finally:
+        db.close()
+
+
 @router.get("/knowledge-base", response_class=HTMLResponse)
 async def knowledge_base_page(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     try:
         db = open_db()
     except Exception as error:
@@ -63,6 +99,9 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
         )
 
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         categories = list(db.scalars(select(Category).order_by(Category.name.asc())))
         items = list(
             db.scalars(
@@ -100,6 +139,15 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
 
 @router.get("/categories/new", response_class=HTMLResponse)
 async def new_category(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+    finally:
+        db.close()
     return templates.TemplateResponse(
         request,
         "admin/category_form.html",
@@ -117,6 +165,8 @@ async def new_category(request: Request) -> HTMLResponse:
 async def create_category(
     request: Request,
 ):
+    if not request.session.get("user"):
+        return login_redirect(request)
     form = await read_form(request)
     slug = form.get("slug", "")
     name = form.get("name", "")
@@ -139,6 +189,9 @@ async def create_category(
 
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         existing = db.scalar(select(Category).where(Category.slug == slug))
         if existing:
             return templates.TemplateResponse(
@@ -161,8 +214,13 @@ async def create_category(
 
 @router.get("/categories/{category_id}/edit", response_class=HTMLResponse)
 async def edit_category(request: Request, category_id: int) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         category = db.get(Category, category_id)
         return templates.TemplateResponse(
             request,
@@ -184,6 +242,8 @@ async def update_category(
     request: Request,
     category_id: int,
 ):
+    if not request.session.get("user"):
+        return login_redirect(request)
     form = await read_form(request)
     slug = form.get("slug", "")
     name = form.get("name", "")
@@ -193,6 +253,9 @@ async def update_category(
     name = name.strip()
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         category = db.get(Category, category_id)
         if category is None or not slug or not name:
             return templates.TemplateResponse(
@@ -217,9 +280,14 @@ async def update_category(
 
 
 @router.post("/categories/{category_id}/delete")
-async def delete_category(category_id: int) -> RedirectResponse:
+async def delete_category(request: Request, category_id: int) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         category = db.get(Category, category_id)
         if category:
             category.is_active = False
@@ -231,8 +299,13 @@ async def delete_category(category_id: int) -> RedirectResponse:
 
 @router.get("/knowledge-base/items/new", response_class=HTMLResponse)
 async def new_knowledge_item(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         categories = list(db.scalars(select(Category).where(Category.is_active.is_(True)).order_by(Category.name.asc())))
         return templates.TemplateResponse(
             request,
@@ -255,6 +328,8 @@ async def new_knowledge_item(request: Request) -> HTMLResponse:
 async def create_knowledge_item(
     request: Request,
 ):
+    if not request.session.get("user"):
+        return login_redirect(request)
     form = await read_form(request)
     category_id = form_int(form, "category_id", 0)
     emotional_tone = form.get("emotional_tone", "any")
@@ -264,6 +339,9 @@ async def create_knowledge_item(
     is_active = form_bool(form, "is_active")
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         categories = list(db.scalars(select(Category).where(Category.is_active.is_(True)).order_by(Category.name.asc())))
         if emotional_tone not in EMOTIONAL_TONES or not title.strip() or not content.strip():
             return templates.TemplateResponse(
@@ -304,8 +382,13 @@ async def create_knowledge_item(
 
 @router.get("/knowledge-base/items/{item_id}/edit", response_class=HTMLResponse)
 async def edit_knowledge_item(request: Request, item_id: int) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         item = db.get(KnowledgeBaseItem, item_id)
         categories = list(db.scalars(select(Category).where(Category.is_active.is_(True)).order_by(Category.name.asc())))
         return templates.TemplateResponse(
@@ -330,6 +413,8 @@ async def update_knowledge_item(
     request: Request,
     item_id: int,
 ):
+    if not request.session.get("user"):
+        return login_redirect(request)
     form = await read_form(request)
     category_id = form_int(form, "category_id", 0)
     emotional_tone = form.get("emotional_tone", "any")
@@ -339,6 +424,9 @@ async def update_knowledge_item(
     is_active = form_bool(form, "is_active")
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         item = db.get(KnowledgeBaseItem, item_id)
         categories = list(db.scalars(select(Category).where(Category.is_active.is_(True)).order_by(Category.name.asc())))
         if item is None or emotional_tone not in EMOTIONAL_TONES or not title.strip() or not content.strip():
@@ -368,9 +456,14 @@ async def update_knowledge_item(
 
 
 @router.post("/knowledge-base/items/{item_id}/delete")
-async def delete_knowledge_item(item_id: int) -> RedirectResponse:
+async def delete_knowledge_item(request: Request, item_id: int) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
     db = open_db()
     try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
         item = db.get(KnowledgeBaseItem, item_id)
         if item:
             try:
@@ -383,3 +476,205 @@ async def delete_knowledge_item(item_id: int) -> RedirectResponse:
     finally:
         db.close()
     return redirect_to("/admin/knowledge-base")
+
+
+@router.get("/users", response_class=HTMLResponse)
+async def users_page(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        users = list(db.scalars(select(User).order_by(User.role.asc(), User.username.asc())))
+        return templates.TemplateResponse(
+            request,
+            "admin/users.html",
+            {"page_title": "Пользователи", "active_page": "users", "users": users, "roles": USER_ROLES},
+        )
+    finally:
+        db.close()
+
+
+@router.get("/users/create", response_class=HTMLResponse)
+async def create_user_page(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+    finally:
+        db.close()
+    return templates.TemplateResponse(
+        request,
+        "admin/user_form.html",
+        {"page_title": "Новый пользователь", "active_page": "users", "user": None, "roles": USER_ROLES, "error": "", "form_action": "/admin/users/create"},
+    )
+
+
+@router.post("/users/create")
+async def create_user(request: Request):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    form = await read_form(request)
+    username = form.get("username", "").strip().lower()
+    email = form.get("email", "").strip().lower()
+    full_name = form.get("full_name", "").strip()
+    role = form.get("role", "client")
+    password = form.get("password", "")
+    is_active = form_bool(form, "is_active")
+    error = ""
+    if not username or not email or not full_name or not password or role not in USER_ROLES:
+        error = "Заполните все поля и выберите корректную роль."
+    elif len(password) < 6:
+        error = "Пароль должен содержать минимум 6 символов."
+
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        if not error and db.scalar(select(User).where((User.username == username) | (User.email == email))):
+            error = "Пользователь с таким логином или email уже существует."
+        if error:
+            return templates.TemplateResponse(
+                request,
+                "admin/user_form.html",
+                {
+                    "page_title": "Новый пользователь",
+                    "active_page": "users",
+                    "user": {"username": username, "email": email, "full_name": full_name, "role": role, "is_active": is_active},
+                    "roles": USER_ROLES,
+                    "error": error,
+                    "form_action": "/admin/users/create",
+                },
+            )
+        db.add(User(username=username, email=email, full_name=full_name, role=role, hashed_password=hash_password(password), is_active=is_active))
+        db.commit()
+        return redirect_to("/admin/users")
+    finally:
+        db.close()
+
+
+@router.get("/users/{user_id}/edit", response_class=HTMLResponse)
+async def edit_user_page(request: Request, user_id: int) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        return templates.TemplateResponse(
+            request,
+            "admin/user_form.html",
+            {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "" if user else "Пользователь не найден.", "form_action": f"/admin/users/{user_id}/edit"},
+        )
+    finally:
+        db.close()
+
+
+@router.post("/users/{user_id}/edit")
+async def edit_user(request: Request, user_id: int):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    form = await read_form(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        username = form.get("username", "").strip().lower()
+        email = form.get("email", "").strip().lower()
+        full_name = form.get("full_name", "").strip()
+        role = form.get("role", "client")
+        is_active = form_bool(form, "is_active")
+        if user is None or not username or not email or not full_name or role not in USER_ROLES:
+            return templates.TemplateResponse(
+                request,
+                "admin/user_form.html",
+                {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "Проверьте поля пользователя.", "form_action": f"/admin/users/{user_id}/edit"},
+            )
+        duplicate = db.scalar(select(User).where(((User.username == username) | (User.email == email)), User.id != user_id))
+        if duplicate:
+            return templates.TemplateResponse(
+                request,
+                "admin/user_form.html",
+                {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "Логин или email уже занят.", "form_action": f"/admin/users/{user_id}/edit"},
+            )
+        user.username = username
+        user.email = email
+        user.full_name = full_name
+        user.role = role
+        user.is_active = is_active
+        db.commit()
+        return redirect_to("/admin/users")
+    finally:
+        db.close()
+
+
+@router.get("/users/{user_id}/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, user_id: int) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        return templates.TemplateResponse(
+            request,
+            "admin/reset_password.html",
+            {"page_title": "Сброс пароля", "active_page": "users", "user": user, "error": ""},
+        )
+    finally:
+        db.close()
+
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_password(request: Request, user_id: int):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    form = await read_form(request)
+    password = form.get("password", "")
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        if user is None or len(password) < 6:
+            return templates.TemplateResponse(
+                request,
+                "admin/reset_password.html",
+                {"page_title": "Сброс пароля", "active_page": "users", "user": user, "error": "Пароль должен содержать минимум 6 символов."},
+            )
+        user.hashed_password = hash_password(password)
+        db.commit()
+        return redirect_to("/admin/users")
+    finally:
+        db.close()
+
+
+@router.post("/users/{user_id}/toggle-active")
+async def toggle_user_active(request: Request, user_id: int):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        if user and user.id != admin.id:
+            user.is_active = not user.is_active
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to("/admin/users")

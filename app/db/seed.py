@@ -1,8 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password, verify_password
 from app.db.session import SessionLocal, get_engine
-from app.models import Category, KnowledgeBaseItem
+from app.models import Category, KnowledgeBaseItem, User
 
 
 CATEGORIES = [
@@ -112,6 +113,12 @@ COMMENTS = {
     ],
 }
 
+DEMO_USERS = [
+    ("admin", "admin@example.local", "Администратор", "admin", "admin123"),
+    ("manager", "manager@example.local", "Менеджер", "manager", "manager123"),
+    ("client", "client@example.local", "Клиент", "client", "client123"),
+]
+
 
 def upsert_categories(db: Session) -> dict[str, Category]:
     categories: dict[str, Category] = {}
@@ -156,11 +163,35 @@ def upsert_comments(db: Session, categories: dict[str, Category]) -> None:
                 item.is_active = True
 
 
+def upsert_demo_users(db: Session) -> None:
+    for username, email, full_name, role, password in DEMO_USERS:
+        user = db.scalar(select(User).where((User.username == username) | (User.email == email)))
+        if user is None:
+            user = User(
+                username=username,
+                email=email,
+                full_name=full_name,
+                role=role,
+                hashed_password=hash_password(password),
+                is_active=True,
+            )
+            db.add(user)
+        else:
+            user.username = username
+            user.email = email
+            user.full_name = full_name
+            user.role = role
+            user.is_active = True
+            if not verify_password(password, user.hashed_password):
+                user.hashed_password = hash_password(password)
+
+
 def seed() -> None:
     get_engine()
     with SessionLocal() as db:
         categories = upsert_categories(db)
         upsert_comments(db, categories)
+        upsert_demo_users(db)
         db.commit()
 
 

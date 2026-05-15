@@ -13,6 +13,8 @@
 - Опциональная интеграция с локальным `llama.cpp` через `http://localhost:8080/v1/chat/completions`.
 - Панель менеджера: список обращений, детали диалога, принятие обращения, ручной ответ, смена статуса.
 - Админ-раздел: CRUD категорий и подготовленных комментариев.
+- Ролевая аутентификация и личные кабинеты: `client`, `manager`, `admin`.
+- Управление пользователями в админ-разделе.
 
 ## Быстрый запуск
 
@@ -38,11 +40,31 @@ uvicorn app.main:app --reload
 - <http://127.0.0.1:8000/manager/>
 - <http://127.0.0.1:8000/admin/knowledge-base>
 
+## Демо-пользователи
+
+Seed-скрипт создает пользователей:
+
+| Логин | Пароль | Роль |
+| --- | --- | --- |
+| `admin` | `admin123` | `admin` |
+| `manager` | `manager123` | `manager` |
+| `client` | `client123` | `client` |
+
+Чтобы переключиться между ролями, нажмите `Выход` и войдите под другим пользователем.
+
+## Личные кабинеты
+
+- Public: `/`, `/login`, `/register`.
+- Client: `/client/dashboard`, `/client/appeals`, `/chat/`.
+- Manager: `/manager/dashboard`, `/manager/appeals`.
+- Admin: `/admin/dashboard`, `/admin/users`, `/admin/knowledge-base`.
+
 ## Переменные окружения
 
 ```env
 APP_NAME=AdResponse
 DEBUG=true
+SECRET_KEY=change-me-for-local-development
 
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
@@ -82,7 +104,6 @@ python3 -m compileall app tests alembic
 
 ## Ограничения
 
-- Нет полноценной аутентификации и ролей входа.
 - Нет production-настроек безопасности.
 - NLP-логика простая и детерминированная.
 - llama.cpp модель и файлы модели не входят в репозиторий.

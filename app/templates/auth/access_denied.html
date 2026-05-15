@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="empty-state card">
+    <span class="badge badge--peach">Доступ закрыт</span>
+    <h1>Недостаточно прав</h1>
+    <p>Этот раздел доступен другой роли. Вернитесь в свой личный кабинет или войдите под подходящим пользователем.</p>
+    <div class="actions">
+      <a class="button button--secondary" href="/">На главную</a>
+      <a class="button button--primary" href="/logout">Сменить пользователя</a>
+    </div>
+  </section>
+{% endblock %}

@@ -9,6 +9,7 @@
 - [ ] Seed data is loaded.
 - [ ] Tests pass.
 - [ ] App starts locally.
+- [ ] Demo users can login: `admin/admin123`, `manager/manager123`, `client/client123`.
 
 Commands:
 
@@ -24,20 +25,24 @@ uvicorn app.main:app --reload
 ## Demo flow
 
 1. Open the home page and briefly explain the goal.
-2. Open `/admin/knowledge-base` and show categories and prepared comments.
-3. Add a prepared manager comment for a category.
-4. Open `/chat/`.
-5. Send a neutral cost request.
-6. Show category, tone, clarifying questions and safe answer.
-7. Send a negative or low-leads request.
-8. Show supportive answer and manager handover recommendation.
-9. Open `/manager/`.
-10. Show the appeal list and filters.
-11. Open appeal detail.
-12. Accept the appeal.
-13. Send a manual manager response.
-14. Show that the full dialogue history is preserved.
-15. Explain fallback mode and optional local `llama.cpp` mode.
+2. Login as `admin`.
+3. Open `/admin/users` and show role-based accounts.
+4. Open `/admin/knowledge-base` and show categories and prepared comments.
+5. Add a prepared manager comment for a category.
+6. Logout and login as `client`.
+7. Open `/chat/`.
+8. Send a neutral cost request.
+9. Show category, tone, clarifying questions and safe answer.
+10. Send a negative or low-leads request.
+11. Show supportive answer and manager handover recommendation.
+12. Logout and login as `manager`.
+13. Open `/manager/`.
+14. Show the appeal list and filters.
+15. Open appeal detail.
+16. Accept the appeal.
+17. Send a manual manager response.
+18. Show that the full dialogue history is preserved.
+19. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize
 
@@ -51,6 +56,8 @@ uvicorn app.main:app --reload
 ## Final functional checklist
 
 - [ ] Client can send a message.
+- [ ] Login/logout works.
+- [ ] Role-specific navigation works.
 - [ ] Message is stored.
 - [ ] Request is classified.
 - [ ] Emotional tone is detected.

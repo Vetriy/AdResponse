@@ -37,6 +37,7 @@ def build_database_url() -> str:
 class Settings:
     app_name: str = os.getenv("APP_NAME", "AdResponse")
     debug: bool = read_bool("DEBUG", True)
+    secret_key: str = os.getenv("SECRET_KEY", "change-me-for-local-development")
     database_host: str = os.getenv("DATABASE_HOST", "localhost")
     database_port: str = os.getenv("DATABASE_PORT", "5432")
     database_name: str = os.getenv("DATABASE_NAME", "adresponse")

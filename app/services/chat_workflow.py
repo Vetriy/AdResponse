@@ -9,6 +9,7 @@ from app.models import (
     HandoverRequest,
     Message,
     SentimentAnalysis,
+    User,
 )
 from app.services.classification import classify_request
 from app.services.knowledge_base import get_category_by_name, select_knowledge_items
@@ -16,8 +17,14 @@ from app.services.response_generation import generate_chat_response
 from app.services.sentiment import analyze_sentiment
 
 
-def create_conversation(db: Session) -> Conversation:
-    client_session = ClientSession(source="website", status="active")
+def create_conversation(db: Session, user: User | None = None) -> Conversation:
+    client_session = ClientSession(
+        user_id=user.id if user else None,
+        client_name=user.full_name if user else None,
+        client_contact=user.email if user else None,
+        source="website",
+        status="active",
+    )
     conversation = Conversation(
         client_session=client_session,
         title="Клиентский чат",
@@ -40,10 +47,17 @@ def get_conversation(db: Session, conversation_id: int) -> Conversation | None:
     )
 
 
-def process_client_message(db: Session, content: str, conversation_id: int | None = None) -> tuple[Conversation, Message, Message, Appeal, list[str], bool]:
+def process_client_message(
+    db: Session,
+    content: str,
+    conversation_id: int | None = None,
+    user: User | None = None,
+) -> tuple[Conversation, Message, Message, Appeal, list[str], bool]:
     conversation = get_conversation(db, conversation_id) if conversation_id else None
     if conversation is None:
-        conversation = create_conversation(db)
+        conversation = create_conversation(db, user)
+    elif user and conversation.client_session.user_id != user.id:
+        raise PermissionError("Conversation does not belong to current client.")
 
     classification = classify_request(content)
     sentiment = analyze_sentiment(content)

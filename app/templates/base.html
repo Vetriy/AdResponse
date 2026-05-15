@@ -25,9 +25,26 @@
 
         <nav class="site-nav" data-site-nav>
           <a class="{% if active_page == 'home' %}is-active{% endif %}" href="/">Главная</a>
-          <a class="{% if active_page == 'chat' %}is-active{% endif %}" href="/chat/">Чат</a>
-          <a class="{% if active_page == 'manager' %}is-active{% endif %}" href="/manager/">Менеджер</a>
-          <a class="{% if active_page == 'knowledge' %}is-active{% endif %}" href="/admin/knowledge-base">База знаний</a>
+          {% if current_user %}
+            {% if current_user.role == "client" %}
+              <a class="{% if active_page == 'client' %}is-active{% endif %}" href="/client/dashboard">Кабинет</a>
+              <a class="{% if active_page == 'chat' %}is-active{% endif %}" href="/chat/">Чат</a>
+              <a href="/client/appeals">Мои обращения</a>
+            {% elif current_user.role == "manager" %}
+              <a class="{% if active_page == 'manager' %}is-active{% endif %}" href="/manager/dashboard">Панель менеджера</a>
+              <a href="/manager/appeals">Обращения</a>
+            {% elif current_user.role == "admin" %}
+              <a class="{% if active_page == 'admin' %}is-active{% endif %}" href="/admin/dashboard">Админ</a>
+              <a class="{% if active_page == 'users' %}is-active{% endif %}" href="/admin/users">Пользователи</a>
+              <a class="{% if active_page == 'knowledge' %}is-active{% endif %}" href="/admin/knowledge-base">База знаний</a>
+              <a class="{% if active_page == 'manager' %}is-active{% endif %}" href="/manager/dashboard">Менеджер</a>
+            {% endif %}
+            <span class="nav-user">{{ current_user.full_name }} · {{ current_user.role }}</span>
+            <a href="/logout">Выход</a>
+          {% else %}
+            <a class="{% if active_page == 'login' %}is-active{% endif %}" href="/login">Вход</a>
+            <a class="{% if active_page == 'register' %}is-active{% endif %}" href="/register">Регистрация</a>
+          {% endif %}
         </nav>
       </header>
 
