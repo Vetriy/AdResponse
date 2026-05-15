@@ -7,18 +7,76 @@
     <p>Управление пользователями, категориями и подготовленными комментариями для безопасной генерации ответов.</p>
   </section>
   <section class="dashboard-grid dashboard-grid--wide">
-    <article class="metric-card card"><span>Пользователи</span><strong>{{ stats.users }}</strong></article>
-    <article class="metric-card card"><span>Клиенты</span><strong>{{ stats.clients }}</strong></article>
-    <article class="metric-card card"><span>Менеджеры</span><strong>{{ stats.managers }}</strong></article>
-    <article class="metric-card card"><span>Администраторы</span><strong>{{ stats.admins }}</strong></article>
-    <article class="metric-card card"><span>Обращения</span><strong>{{ stats.appeals }}</strong></article>
-    <article class="metric-card card"><span>Новые обращения</span><strong>{{ stats.new_appeals }}</strong></article>
-    <article class="metric-card card"><span>Требуют внимания менеджера</span><strong>{{ stats.manager_attention }}</strong></article>
-    <article class="metric-card card"><span>Закрытые обращения</span><strong>{{ stats.closed_appeals }}</strong></article>
-    <article class="metric-card card"><span>Подготовленные комментарии</span><strong>{{ stats.comments }}</strong></article>
-    <article class="metric-card card"><span>Активные комментарии</span><strong>{{ stats.active_comments }}</strong></article>
+    <article class="metric-card card"><span>Всего пользователей</span><strong>{{ analytics.users.total }}</strong></article>
+    <article class="metric-card card"><span>Всего обращений</span><strong>{{ analytics.appeals.total }}</strong></article>
+    <article class="metric-card card"><span>Всего подготовленных комментариев</span><strong>{{ analytics.comments.total }}</strong></article>
     <article class="metric-card card"><span>Загруженные отчеты</span><strong>{{ stats.reports }}</strong></article>
   </section>
+
+  <section class="analytics-grid">
+    <article class="card chart-card">
+      <div class="table-card__header">
+        <h2>Пользователи по ролям</h2>
+        <span class="badge badge--blue">{{ analytics.users.total }}</span>
+      </div>
+      <div class="segmented-bar" aria-label="Распределение пользователей по ролям">
+        <span class="segment segment--blue" style="width: {{ percent(analytics.users.roles.client, analytics.users.total) }}%"></span>
+        <span class="segment segment--mint" style="width: {{ percent(analytics.users.roles.manager, analytics.users.total) }}%"></span>
+        <span class="segment segment--peach" style="width: {{ percent(analytics.users.roles.admin, analytics.users.total) }}%"></span>
+      </div>
+      <div class="bar-list">
+        <div><span>Клиенты</span><strong>{{ analytics.users.roles.client }}</strong><i style="width: {{ percent(analytics.users.roles.client, analytics.users.total) }}%"></i></div>
+        <div><span>Менеджеры</span><strong>{{ analytics.users.roles.manager }}</strong><i style="width: {{ percent(analytics.users.roles.manager, analytics.users.total) }}%"></i></div>
+        <div><span>Администраторы</span><strong>{{ analytics.users.roles.admin }}</strong><i style="width: {{ percent(analytics.users.roles.admin, analytics.users.total) }}%"></i></div>
+      </div>
+    </article>
+
+    <article class="card chart-card">
+      <div class="table-card__header">
+        <h2>Обращения по группам</h2>
+        <span class="badge badge--lavender">{{ analytics.appeals.total }}</span>
+      </div>
+      <div class="bar-list">
+        <div><span>Новые</span><strong>{{ analytics.appeals.groups.new }}</strong><i style="width: {{ percent(analytics.appeals.groups.new, analytics.appeals.total) }}%"></i></div>
+        <div><span>В работе</span><strong>{{ analytics.appeals.groups.in_progress }}</strong><i style="width: {{ percent(analytics.appeals.groups.in_progress, analytics.appeals.total) }}%"></i></div>
+        <div><span>Нужен менеджер</span><strong>{{ analytics.appeals.groups.manager_needed }}</strong><i style="width: {{ percent(analytics.appeals.groups.manager_needed, analytics.appeals.total) }}%"></i></div>
+        <div><span>Завершенные</span><strong>{{ analytics.appeals.groups.closed }}</strong><i style="width: {{ percent(analytics.appeals.groups.closed, analytics.appeals.total) }}%"></i></div>
+      </div>
+    </article>
+
+    <article class="card chart-card">
+      <div class="table-card__header">
+        <h2>Подготовленные комментарии</h2>
+        <span class="badge badge--mint">{{ analytics.comments.total }}</span>
+      </div>
+      <div class="segmented-bar">
+        <span class="segment segment--mint" style="width: {{ percent(analytics.comments.active, analytics.comments.total) }}%"></span>
+        <span class="segment segment--peach" style="width: {{ percent(analytics.comments.inactive, analytics.comments.total) }}%"></span>
+      </div>
+      <div class="progress-row"><span>Активные</span><strong>{{ analytics.comments.active }}</strong></div>
+      <div class="progress-row"><span>Выключенные</span><strong>{{ analytics.comments.inactive }}</strong></div>
+    </article>
+
+    <article class="card chart-card">
+      <div class="table-card__header">
+        <h2>Оценки автоответов</h2>
+        <span class="badge badge--peach">{{ analytics.ai_feedback.total }}</span>
+      </div>
+      <div class="segmented-bar">
+        <span class="segment segment--mint" style="width: {{ percent(analytics.ai_feedback.likes, analytics.ai_feedback.total) }}%"></span>
+        <span class="segment segment--peach" style="width: {{ percent(analytics.ai_feedback.dislikes, analytics.ai_feedback.total) }}%"></span>
+      </div>
+      <div class="progress-row"><span>Понравилось</span><strong>{{ analytics.ai_feedback.likes }}</strong></div>
+      <div class="progress-row"><span>Не понравилось</span><strong>{{ analytics.ai_feedback.dislikes }}</strong></div>
+      <p class="table-note">Полезность: {{ analytics.ai_feedback.helpfulness_ratio }}%</p>
+      <div class="reason-cloud">
+        {% for reason in analytics.ai_feedback.reasons %}
+          <span>{{ reason.label }}: {{ reason.count }}</span>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
   <section class="card table-card">
     <div class="table-card__header">
       <h2>Рабочие разделы</h2>

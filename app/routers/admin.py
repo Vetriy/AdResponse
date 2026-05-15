@@ -11,6 +11,7 @@ from app.core.security import hash_password
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
+from app.services.analytics import build_admin_analytics, status_rows_for_chart
 
 templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
@@ -77,6 +78,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
             "active_comments": db.scalar(select(func.count(KnowledgeBaseItem.id)).where(KnowledgeBaseItem.is_active.is_(True))) or 0,
             "reports": db.scalar(select(func.count(AdvertisingReport.id))) or 0,
         }
+        analytics = build_admin_analytics(db)
         return templates.TemplateResponse(
             request,
             "admin/dashboard.html",
@@ -84,6 +86,8 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
                 "page_title": "Админ-панель",
                 "active_page": "admin",
                 "stats": stats,
+                "analytics": analytics,
+                "status_chart_rows": status_rows_for_chart(analytics["appeals"]["status_counts"]),
             },
         )
     finally:

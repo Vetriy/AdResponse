@@ -27,7 +27,7 @@ uvicorn app.main:app --reload
 1. Open the home page and briefly explain the goal.
 2. Login as `admin`.
 3. Show clean admin navigation: `Главная`, `Админ`, `Пользователи`, `База знаний`, `Выход`.
-4. Open `/admin/dashboard` and show statistics cards.
+4. Open `/admin/dashboard` and show grouped analytics with local chart-like blocks: users by role, appeals by status group, comments by activity and AI-answer feedback.
 5. Open `/admin/users` and show Russian role labels.
 6. Open `/admin/knowledge-base` and show categories and prepared comment cards.
 7. Add a prepared manager comment for a category.
@@ -40,14 +40,17 @@ uvicorn app.main:app --reload
 14. Show tone-aware response that reduces negativity and offers manager handover.
 15. Logout and login as `manager`.
 16. Open `/manager/`.
-17. Show the appeal list, filters, client identifier and `Обращение №...`.
-18. Open appeal detail.
-19. Accept the appeal and explain that it закрепляет диалог за менеджером.
-20. Upload an advertising report for the client.
-21. Send a manual manager response with an attachment.
-22. Login as client, show report in dashboard and ask a report-related question.
-23. Show that the manager answer and attachments remain in the same appeal history.
-24. Explain fallback mode and optional local `llama.cpp` mode.
+17. Show grouped appeal list, filters, client identifier, `Обращение №...` and sorting by latest client activity.
+18. Open `/manager/clients` and show client summary with total/active appeals and last report date.
+19. Open appeal detail.
+20. Accept the appeal and explain that it закрепляет диалог за менеджером.
+21. Upload an advertising report for the client.
+22. Send a manual manager response with an attachment.
+23. Finish the appeal.
+24. Login as client, show report in dashboard, ask a report-related question and rate the completed appeal.
+25. Like/dislike an automatic answer and show the aggregate on admin dashboard.
+26. Send `Как вам котик?` and show the polite redirect to advertising context.
+27. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize
 
@@ -66,6 +69,7 @@ uvicorn app.main:app --reload
 - [ ] Role-specific navigation works.
 - [ ] Role-specific navigation has no duplicated primary items.
 - [ ] Admin dashboard statistics are visible.
+- [ ] Admin dashboard chart-like analytics are visible.
 - [ ] Role labels are displayed in Russian.
 - [ ] Message is stored.
 - [ ] Message attachments can be uploaded and reopened.
@@ -81,6 +85,11 @@ uvicorn app.main:app --reload
 - [ ] Manager can accept an appeal.
 - [ ] Manager can send a manual response.
 - [ ] Manager can upload an advertising report for a client.
+- [ ] Manager can open the clients section.
+- [ ] Manager can finish an appeal.
+- [ ] Client can rate a completed appeal.
+- [ ] Client can like/dislike an automatic answer.
+- [ ] Unusual questions receive a human, advertising-context fallback answer.
 - [ ] Client can see advertising reports and ask a question about a report.
 - [ ] Admin can manage categories.
 - [ ] Admin can manage prepared comments.

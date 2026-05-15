@@ -100,12 +100,24 @@
           <button class="button button--primary" type="submit">Сохранить статус</button>
         </form>
 
+        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/finish">
+          <button class="button button--primary" type="submit">Завершить обращение</button>
+          <p class="form-hint form-hint--neutral">После завершения клиент увидит форму оценки работы менеджера.</p>
+        </form>
+
         {% if appeal.generated_responses %}
           <div class="mini-section">
             <h3>Автоматические ответы системы</h3>
-            {% for response in appeal.generated_responses %}
-              <p><span class="badge badge--lavender">{{ source_label(response.source) }}</span></p>
-            {% endfor %}
+            <p>Автоответов системы: <strong>{{ appeal.generated_responses|length }}</strong></p>
+            <p>Последний источник: <span class="badge badge--lavender">{{ source_label(appeal.generated_responses[-1].source) }}</span></p>
+          </div>
+        {% endif %}
+
+        {% if rating_summary %}
+          <div class="mini-section">
+            <h3>Рейтинг менеджера</h3>
+            <p>Средняя оценка: <strong>{{ rating_summary.average_rating if rating_summary.average_rating else "—" }}</strong></p>
+            <p>Оцененных завершенных обращений: <strong>{{ rating_summary.rated_count }}</strong></p>
           </div>
         {% endif %}
 

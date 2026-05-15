@@ -31,8 +31,10 @@
               <a class="{% if active_page == 'chat' %}is-active{% endif %}" href="/chat/">Чат / Новое обращение</a>
             {% elif current_user.role == "manager" %}
               <a class="{% if active_page == 'manager' %}is-active{% endif %}" href="/manager/dashboard">Панель обращений</a>
+              <a class="{% if active_page == 'manager-clients' %}is-active{% endif %}" href="/manager/clients">Клиенты</a>
             {% elif current_user.role == "admin" %}
               <a class="{% if active_page == 'admin' %}is-active{% endif %}" href="/admin/dashboard">Админ</a>
+              <a class="{% if active_page == 'manager' or active_page == 'manager-clients' %}is-active{% endif %}" href="/manager/dashboard">Обращения</a>
               <a class="{% if active_page == 'users' %}is-active{% endif %}" href="/admin/users">Пользователи</a>
               <a class="{% if active_page == 'knowledge' %}is-active{% endif %}" href="/admin/knowledge-base">База знаний</a>
             {% endif %}

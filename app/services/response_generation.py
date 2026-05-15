@@ -53,6 +53,7 @@ MISSING_INFO_QUESTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
 
 COMPLEX_CATEGORIES = {"low number of leads", "dissatisfaction with campaign results", "contact manager request"}
 NEGATIVE_TONES = {"negative", "irritated", "disappointed"}
+PLAYFUL_OFFTOPIC_MARKERS = ("кот", "котик", "собак", "мем", "шутк", "как вам", "нравится")
 
 
 def build_clarifying_questions(text: str, category: str) -> list[str]:
@@ -66,6 +67,11 @@ def build_clarifying_questions(text: str, category: str) -> list[str]:
     return questions[:3]
 
 
+def is_playful_or_unusual(text: str, category: str) -> bool:
+    normalized = text.lower()
+    return category == "other" or any(marker in normalized for marker in PLAYFUL_OFFTOPIC_MARKERS)
+
+
 def generate_fallback_response(
     text: str,
     category: str,
@@ -74,10 +80,19 @@ def generate_fallback_response(
     report_context: str | None = None,
 ) -> GeneratedChatResponse:
     questions = build_clarifying_questions(text, category)
+    unusual = is_playful_or_unusual(text, category)
+    if unusual and not questions:
+        questions = [
+            "Хотите обсудить продвижение, результаты отчета или материалы для рекламной кампании?",
+            "Нужно подключить менеджера к вопросу или достаточно краткой консультации здесь?",
+        ]
     handover_offered = category in COMPLEX_CATEGORIES or emotional_tone in NEGATIVE_TONES
     parts: list[str] = []
 
-    if category == "contact manager request":
+    if unusual:
+        parts.append("Сообщение понял. Если вопрос не про рекламу, отвечу легко: звучит приятно и по-доброму.")
+        parts.append("А по рабочей части могу помочь с продвижением, отчетами, материалами кампании или вопросом для менеджера.")
+    elif category == "contact manager request":
         parts.append("Передать диалог менеджеру можно. Чтобы он быстрее включился в задачу, соберем короткий контекст прямо здесь.")
     elif emotional_tone == "anxious":
         parts.append("Ситуацию можно спокойно проверить по шагам: сначала уточним вводные, затем будет проще понять, где нужен разбор.")
@@ -91,13 +106,13 @@ def generate_fallback_response(
     if report_context:
         parts.append(f"Вижу, что вопрос связан с отчетом: {report_context}.")
 
-    if knowledge_items:
+    if knowledge_items and not unusual:
         if emotional_tone in NEGATIVE_TONES:
             parts.append("По таким ситуациям обычно сначала проверяют:")
         else:
             parts.append("Сейчас можно ориентироваться на следующее:")
         parts.extend(f"- {item.content}" for item in knowledge_items[:2])
-    else:
+    elif not unusual:
         parts.append(
             "Без исходных данных нельзя корректно назвать цену, срок или гарантировать рекламный результат, но можно быстро собрать недостающие вводные."
         )

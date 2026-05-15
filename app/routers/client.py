@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import AdvertisingReport, Appeal, Conversation, Message
+from app.models import AdvertisingReport, Appeal, AppealFeedback, Conversation, Message
+from app.services.feedback import client_ai_feedback_map, client_feedback_for_appeal
 
 templates = create_templates()
 router = APIRouter(prefix="/client", tags=["client cabinet"])
@@ -66,7 +67,7 @@ async def client_appeals(request: Request) -> HTMLResponse:
 
 
 @router.get("/appeals/{appeal_id}", response_class=HTMLResponse)
-async def client_appeal_detail(request: Request, appeal_id: int) -> HTMLResponse:
+async def client_appeal_detail(request: Request, appeal_id: int, feedback_error: str = "") -> HTMLResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     db = open_db()
@@ -81,15 +82,73 @@ async def client_appeal_detail(request: Request, appeal_id: int) -> HTMLResponse
             .where(Conversation.client_session.has(user_id=user.id))
             .options(
                 selectinload(Appeal.category),
+                selectinload(Appeal.assigned_manager),
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
                 selectinload(Appeal.conversation).selectinload(Conversation.messages).selectinload(Message.attachments),
             )
         )
+        ai_feedback = {}
+        appeal_feedback = None
+        if appeal:
+            ai_feedback = client_ai_feedback_map(db, user.id, [message.id for message in appeal.conversation.messages if message.sender_type == "system"])
+            appeal_feedback = client_feedback_for_appeal(db, appeal.id, user.id)
         return templates.TemplateResponse(
             request,
             "client/appeal_detail.html",
-            {"page_title": "Мое обращение", "active_page": "client", "appeal": appeal, "db_error": None},
+            {
+                "page_title": "Мое обращение",
+                "active_page": "client",
+                "appeal": appeal,
+                "db_error": None,
+                "ai_feedback": ai_feedback,
+                "appeal_feedback": appeal_feedback,
+                "feedback_error": feedback_error,
+            },
         )
+    finally:
+        db.close()
+
+
+@router.post("/appeals/{appeal_id}/feedback")
+async def submit_appeal_feedback(request: Request, appeal_id: int) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    form = await request.form()
+    try:
+        rating = int(str(form.get("rating", "0")))
+    except ValueError:
+        rating = 0
+    comment = str(form.get("comment", "")).strip()
+    if rating < 1 or rating > 5:
+        return redirect_to(f"/client/appeals/{appeal_id}?feedback_error=Некорректная оценка")
+
+    db = open_db()
+    try:
+        user = require_role(request, db, {"client"})
+        if not hasattr(user, "id"):
+            return user
+        appeal = db.scalar(
+            select(Appeal)
+            .where(Appeal.id == appeal_id)
+            .join(Appeal.conversation)
+            .where(Conversation.client_session.has(user_id=user.id))
+        )
+        if appeal is None or appeal.status != "closed":
+            return redirect_to(f"/client/appeals/{appeal_id}?feedback_error=Оценить можно только завершенное обращение")
+        existing = client_feedback_for_appeal(db, appeal.id, user.id)
+        if existing is not None:
+            return redirect_to(f"/client/appeals/{appeal_id}?feedback_error=Оценка уже сохранена")
+        db.add(
+            AppealFeedback(
+                appeal_id=appeal.id,
+                client_user_id=user.id,
+                manager_user_id=appeal.assigned_manager_id,
+                rating=rating,
+                comment=comment or None,
+            )
+        )
+        db.commit()
+        return redirect_to(f"/client/appeals/{appeal_id}")
     finally:
         db.close()
 

@@ -9,6 +9,8 @@ from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, ClientSession, Conversation, Message, MessageAttachment, User
+from app.services.feedback import manager_rating_summary
+from app.services.manager_workflow import finish_appeal_for_manager, group_manager_appeals, list_manager_clients, resolve_appeal_client_user
 from app.services.uploads import save_upload_file, validate_upload_filename
 
 templates = create_templates()
@@ -82,6 +84,8 @@ async def manager_dashboard(
                 "tones": EMOTIONAL_TONES,
                 "filters": {"status": status, "category": category, "tone": tone},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
+                "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "rating_summary": None,
                 "db_error": database_error_message(error),
             },
         )
@@ -106,10 +110,7 @@ async def manager_dashboard(
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
                 selectinload(Appeal.conversation).selectinload(Conversation.client_session).selectinload(ClientSession.user),
             )
-            .order_by(Appeal.created_at.desc())
         )
-        if current_user.role == "manager":
-            statement = statement.where((Appeal.assigned_manager_id == current_user.id) | (Appeal.assigned_manager_id.is_(None)))
         if status:
             statement = statement.where(Appeal.status == status)
         if category and category.isdigit():
@@ -118,6 +119,7 @@ async def manager_dashboard(
             statement = statement.where(Appeal.emotional_tone == tone)
 
         appeals = list(db.scalars(statement))
+        appeal_groups = group_manager_appeals(appeals, current_user.id if current_user.role == "manager" else None)
         return templates.TemplateResponse(
             request,
             "manager/dashboard.html",
@@ -130,6 +132,8 @@ async def manager_dashboard(
                 "tones": EMOTIONAL_TONES,
                 "filters": {"status": status, "category": category, "tone": tone},
                 "metrics": metrics,
+                "appeal_groups": appeal_groups,
+                "rating_summary": manager_rating_summary(db, current_user.id if current_user.role == "manager" else None),
                 "db_error": None,
             },
         )
@@ -146,6 +150,8 @@ async def manager_dashboard(
                 "tones": EMOTIONAL_TONES,
                 "filters": {"status": status, "category": category, "tone": tone},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
+                "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "rating_summary": None,
                 "db_error": database_error_message(error),
             },
         )
@@ -168,6 +174,7 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 "active_page": "manager",
                 "appeal": None,
                 "statuses": APPEAL_STATUSES,
+                "rating_summary": None,
                 "db_error": database_error_message(db_error),
                 "error": error,
             },
@@ -205,6 +212,7 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 "active_page": "manager",
                 "appeal": appeal,
                 "statuses": APPEAL_STATUSES,
+                "rating_summary": manager_rating_summary(db, appeal.assigned_manager_id) if appeal and appeal.assigned_manager_id else None,
                 "db_error": None,
                 "error": error,
             },
@@ -218,6 +226,7 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 "active_page": "manager",
                 "appeal": None,
                 "statuses": APPEAL_STATUSES,
+                "rating_summary": None,
                 "db_error": database_error_message(error),
                 "error": "",
             },
@@ -236,6 +245,40 @@ async def manager_appeals_alias(request: Request, status: str = "", category: st
     return await manager_dashboard(request, status=status, category=category, tone=tone)
 
 
+@router.get("/clients", response_class=HTMLResponse)
+async def manager_clients(request: Request) -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        return templates.TemplateResponse(
+            request,
+            "manager/clients.html",
+            {
+                "page_title": "Клиенты",
+                "active_page": "manager-clients",
+                "clients": list_manager_clients(db),
+                "db_error": None,
+            },
+        )
+    except Exception as error:
+        return templates.TemplateResponse(
+            request,
+            "manager/clients.html",
+            {
+                "page_title": "Клиенты",
+                "active_page": "manager-clients",
+                "clients": [],
+                "db_error": database_error_message(error),
+            },
+        )
+    finally:
+        db.close()
+
+
 @router.post("/appeals/{appeal_id}/accept")
 async def accept_appeal(request: Request, appeal_id: int) -> RedirectResponse:
     db = open_db()
@@ -247,6 +290,21 @@ async def accept_appeal(request: Request, appeal_id: int) -> RedirectResponse:
         if appeal:
             appeal.assigned_manager_id = current_user.id
             appeal.status = "assigned_to_manager"
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to(f"/manager/appeals/{appeal_id}")
+
+
+@router.post("/appeals/{appeal_id}/finish")
+async def finish_appeal(request: Request, appeal_id: int) -> RedirectResponse:
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        appeal = db.get(Appeal, appeal_id)
+        if finish_appeal_for_manager(appeal, current_user):
             db.commit()
     finally:
         db.close()
@@ -335,9 +393,14 @@ async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResp
         appeal = db.scalar(
             select(Appeal)
             .where(Appeal.id == appeal_id)
-            .options(selectinload(Appeal.conversation).selectinload(Conversation.client_session))
+            .options(
+                selectinload(Appeal.conversation)
+                .selectinload(Conversation.client_session)
+                .selectinload(ClientSession.user)
+            )
         )
-        if appeal is None or appeal.conversation.client_session.user_id is None:
+        client = resolve_appeal_client_user(db, appeal)
+        if appeal is None or client is None:
             return redirect_to(f"/manager/appeals/{appeal_id}?error=Клиент обращения не найден")
         if current_user.role == "manager" and appeal.assigned_manager_id not in {None, current_user.id}:
             return redirect_to(f"/manager/appeals/{appeal_id}?error=Обращение закреплено за другим менеджером")
@@ -345,7 +408,7 @@ async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResp
         stored = await save_upload_file(file, "reports")
         db.add(
             AdvertisingReport(
-                client_user_id=appeal.conversation.client_session.user_id,
+                client_user_id=client.id,
                 appeal_id=appeal.id,
                 uploaded_by_user_id=current_user.id,
                 title=title,

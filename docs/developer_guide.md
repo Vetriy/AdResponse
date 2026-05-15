@@ -81,7 +81,11 @@ Current tests cover:
 - local fallback generation;
 - llama.cpp fallback behavior without a real server;
 - admin helper validation;
-- placeholder manager helper;
+- manager workflow helpers: grouping, finish appeal, client resolution for report upload;
+- appeal rating aggregation;
+- AI answer feedback validation;
+- admin analytics helper logic;
+- unusual-question fallback behavior;
 - page smoke checks.
 - password hashing and role helper checks.
 
@@ -104,3 +108,12 @@ The project uses signed cookie sessions through Starlette `SessionMiddleware`. P
 ## Safety rules
 
 Do not add external cloud LLM APIs. The only LLM integration must be local `llama.cpp`. The response generator must not invent prices, deadlines, guarantees, services, facts or exact advertising results.
+
+## Feedback and analytics
+
+Migration `20260516_0005_add_feedback_tables.py` adds:
+
+- `appeal_feedback` for the client's final rating of a completed appeal;
+- `ai_response_feedback` for like/dislike on system answers and dislike reasons.
+
+Analytics are built in `app/services/analytics.py` and rendered with local HTML/CSS only. Manager workflow helpers live in `app/services/manager_workflow.py`; report upload resolves the client from the appeal conversation session instead of relying on a missing form field.

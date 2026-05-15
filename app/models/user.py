@@ -29,3 +29,12 @@ class User(TimestampMixin, Base):
         foreign_keys="AdvertisingReport.uploaded_by_user_id",
         back_populates="uploaded_by",
     )
+    appeal_feedback: Mapped[list["AppealFeedback"]] = relationship(
+        foreign_keys="AppealFeedback.client_user_id",
+        back_populates="client",
+    )
+    manager_feedback: Mapped[list["AppealFeedback"]] = relationship(
+        foreign_keys="AppealFeedback.manager_user_id",
+        back_populates="manager",
+    )
+    ai_response_feedback: Mapped[list["AiResponseFeedback"]] = relationship(back_populates="client")

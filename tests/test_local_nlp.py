@@ -88,3 +88,14 @@ def test_fallback_response_varies_by_emotional_tone() -> None:
     assert anxious.text != negative.text
     assert "спокойно проверить по шагам" in anxious.text
     assert "отделим эмоции от фактов" in negative.text
+
+
+def test_unusual_question_fallback_is_human_and_ad_context_safe() -> None:
+    result = generate_fallback_response("Как вам котик?", "other", "neutral", [])
+    lowered = result.text.lower()
+
+    assert "продвиж" in lowered
+    assert "менеджер" in lowered
+    assert len(result.clarifying_questions) == 2
+    for forbidden in ("prepared", "fallback", "llama", "local_rules", "prompt", "подготовленные комментарии"):
+        assert forbidden not in lowered

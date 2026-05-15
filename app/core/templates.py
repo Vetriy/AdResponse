@@ -11,6 +11,9 @@ from app.services.labels import (
     status_label,
     tone_label,
 )
+from app.services.feedback import DISLIKE_REASONS, dislike_reason_label
+from app.services.manager_workflow import assignment_badge_label, assignment_group, latest_client_activity
+from app.services.analytics import percent
 
 
 def inject_current_user(request: Request) -> dict:
@@ -28,5 +31,11 @@ def create_templates() -> Jinja2Templates:
         source_label=source_label,
         status_label=status_label,
         tone_label=tone_label,
+        assignment_badge_label=assignment_badge_label,
+        assignment_group=assignment_group,
+        dislike_reason_label=dislike_reason_label,
+        dislike_reasons=DISLIKE_REASONS,
+        latest_client_activity=latest_client_activity,
+        percent=percent,
     )
     return templates

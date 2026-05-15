@@ -31,19 +31,44 @@
                 {% endfor %}
               </div>
             {% endif %}
+            {% if message.sender_type == "system" %}
+              {% set saved_feedback = ai_feedback.get(message.id) %}
+              <form class="ai-feedback" data-ai-feedback action="/chat/api/messages/{{ message.id }}/feedback" method="post">
+                <span>Оценить ответ</span>
+                <button class="feedback-chip {% if saved_feedback and saved_feedback.value == 'like' %}is-selected{% endif %}" type="submit" name="value" value="like">Нравится</button>
+                <button class="feedback-chip {% if saved_feedback and saved_feedback.value == 'dislike' %}is-selected{% endif %}" type="button" data-dislike-toggle>Не нравится</button>
+                <div class="dislike-panel" {% if not saved_feedback or saved_feedback.value != 'dislike' %}hidden{% endif %}>
+                  <input type="hidden" name="value" value="dislike">
+                  <select name="reason">
+                    {% for key, label in dislike_reasons.items() %}
+                      <option value="{{ key }}" {% if saved_feedback and saved_feedback.reason == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <input name="custom_reason" maxlength="300" placeholder="Если выбрали другое" value="{{ saved_feedback.custom_reason if saved_feedback and saved_feedback.custom_reason else '' }}">
+                  <button class="button button--secondary button--small" type="submit">Сохранить</button>
+                </div>
+                <small data-feedback-status>{% if saved_feedback %}Оценка сохранена{% endif %}</small>
+              </form>
+            {% endif %}
           </div>
         {% endfor %}
       </div>
-      <form class="form chat-form" data-chat-form>
-        <label for="message">Продолжить обращение</label>
-        <div class="chat-input-row">
-          <textarea id="message" rows="3" placeholder="Напишите уточнение или ответ менеджеру" data-chat-input></textarea>
-          <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
+      {% if appeal.status != "closed" %}
+        <form class="form chat-form" data-chat-form>
+          <label for="message">Продолжить обращение</label>
+          <div class="chat-input-row">
+            <textarea id="message" rows="3" placeholder="Напишите уточнение или ответ менеджеру" data-chat-input></textarea>
+            <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
+          </div>
+          <label class="file-field" for="attachments">Прикрепить файлы</label>
+          <input id="attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" data-chat-files>
+          <p class="form-hint" data-chat-error hidden></p>
+        </form>
+      {% else %}
+        <div class="chat-form">
+          <p class="form-hint form-hint--neutral">Обращение завершено. Можно оставить оценку работы менеджера.</p>
         </div>
-        <label class="file-field" for="attachments">Прикрепить файлы</label>
-        <input id="attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt" data-chat-files>
-        <p class="form-hint" data-chat-error hidden></p>
-      </form>
+      {% endif %}
     </div>
 
     <aside class="card side-panel">
@@ -54,6 +79,32 @@
         <span class="badge badge--mint" data-chat-handover>менеджер: {{ "предложен" if appeal.status in ["needs_manager", "handover_requested", "assigned_to_manager", "manager_answered"] else "по ситуации" }}</span>
       </div>
       <p>Это выбранное обращение. Новое обращение создается отдельно через страницу чата.</p>
+      {% if appeal.status == "closed" %}
+        <div class="mini-section">
+          <h3>Оценка менеджера</h3>
+          {% if feedback_error %}
+            <p class="form-hint">{{ feedback_error }}</p>
+          {% endif %}
+          {% if appeal_feedback %}
+            <p>Ваша оценка: <strong>{{ appeal_feedback.rating }} из 5</strong></p>
+            {% if appeal_feedback.comment %}<p>{{ appeal_feedback.comment }}</p>{% endif %}
+          {% else %}
+            <form class="form action-form" method="post" action="/client/appeals/{{ appeal.id }}/feedback">
+              <label for="rating">Оценка</label>
+              <select id="rating" name="rating" required>
+                <option value="5">5 — отлично</option>
+                <option value="4">4 — хорошо</option>
+                <option value="3">3 — нормально</option>
+                <option value="2">2 — плохо</option>
+                <option value="1">1 — совсем не помогло</option>
+              </select>
+              <label for="comment">Комментарий</label>
+              <textarea id="comment" name="comment" rows="3" placeholder="Необязательно"></textarea>
+              <button class="button button--primary" type="submit">Оценить</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
     </aside>
     </section>
   {% endif %}

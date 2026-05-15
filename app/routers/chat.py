@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import AdvertisingReport, Conversation, Message, MessageAttachment
+from app.models import AdvertisingReport, Appeal, Conversation, Message, MessageAttachment
 from app.schemas.chat import (
     ChatMessageCreate,
     ChatMessageRead,
@@ -19,6 +19,7 @@ from app.schemas.chat import (
 )
 from app.services.chat_workflow import create_conversation, get_conversation, process_client_message
 from app.services.labels import category_label, status_label, tone_label
+from app.services.feedback import client_ai_feedback_map, store_or_update_ai_feedback
 from app.services.uploads import is_image_upload, save_upload_file, validate_upload_filename
 
 templates = create_templates()
@@ -68,13 +69,16 @@ def serialize_attachment(attachment: MessageAttachment):
     }
 
 
-def serialize_message(message: Message) -> ChatMessageRead:
+def serialize_message(message: Message, feedback_map: dict[int, object] | None = None) -> ChatMessageRead:
+    feedback = feedback_map.get(message.id) if feedback_map else None
     return ChatMessageRead(
         id=message.id,
         sender_type=message.sender_type,
         content=message.content,
         created_at=message.created_at,
         attachments=[serialize_attachment(attachment) for attachment in message.attachments],
+        ai_feedback_value=feedback.value if feedback else None,
+        ai_feedback_reason=feedback.reason if feedback else None,
     )
 
 
@@ -150,9 +154,10 @@ def read_chat_history(request: Request, conversation_id: int, db: Session = Depe
         raise HTTPException(status_code=403, detail="Access denied.")
 
     appeal = conversation.appeal
+    feedback_map = client_ai_feedback_map(db, user.id, [message.id for message in conversation.messages if message.sender_type == "system"])
     return ConversationHistoryResponse(
         conversation_id=conversation.id,
-        messages=[serialize_message(message) for message in conversation.messages],
+        messages=[serialize_message(message, feedback_map) for message in conversation.messages],
         category=appeal.request_category if appeal else None,
         category_label=category_label(appeal.request_category) if appeal else None,
         emotional_tone=appeal.emotional_tone if appeal else None,
@@ -276,3 +281,36 @@ def download_message_attachment(request: Request, attachment_id: int, db: Sessio
     if not path.exists():
         raise HTTPException(status_code=404, detail="File was not found.")
     return FileResponse(path, media_type=attachment.content_type, filename=attachment.original_filename)
+
+
+@router.post("/api/messages/{message_id}/feedback")
+async def rate_ai_message(request: Request, message_id: int, db: Session = Depends(get_chat_db)) -> dict[str, str]:
+    user = require_role(request, db, {"client"})
+    if not hasattr(user, "id"):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    form = await request.form()
+    message = db.scalar(
+        select(Message)
+        .where(Message.id == message_id, Message.sender_type == "system")
+        .options(selectinload(Message.conversation).selectinload(Conversation.client_session))
+    )
+    if message is None or message.conversation.client_session.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Ответ не найден.")
+    appeal = db.scalar(select(Appeal).where(Appeal.conversation_id == message.conversation_id))
+    if appeal is None:
+        raise HTTPException(status_code=404, detail="Обращение не найдено.")
+    try:
+        feedback = store_or_update_ai_feedback(
+            db,
+            message_id=message.id,
+            appeal_id=appeal.id,
+            client_user_id=user.id,
+            value=str(form.get("value", "")),
+            reason=str(form.get("reason", "")),
+            custom_reason=str(form.get("custom_reason", "")),
+        )
+        db.commit()
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"status": "ok", "value": feedback.value, "reason": feedback.reason or ""}

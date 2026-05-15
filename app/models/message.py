@@ -22,3 +22,7 @@ class Message(TimestampMixin, Base):
         back_populates="message",
         cascade="all, delete-orphan",
     )
+    ai_feedback: Mapped[list["AiResponseFeedback"]] = relationship(
+        back_populates="message",
+        cascade="all, delete-orphan",
+    )

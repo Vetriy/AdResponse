@@ -32,7 +32,10 @@
                   </div>
                   <h3>{{ item.title }}</h3>
                   <p>{{ item.content }}</p>
-                  <span class="table-note">Приоритет: {{ item.priority }}</span>
+                </div>
+                <div class="kb-item-card__priority">
+                  <span>Приоритет</span>
+                  <strong>{{ item.priority }}</strong>
                 </div>
                 <div class="kb-item-card__actions">
                   <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>

@@ -35,6 +35,7 @@ Expected:
 - response asks clarifying questions and does not invent exact price.
 - response does not expose internal phrases about prepared manager comments, fallback, llama.cpp or system rules.
 - response wording is friendly and differs from anxious or negative responses.
+- each system answer has `Нравится` and `Не нравится` controls.
 
 ## 2. Campaign launch request
 
@@ -138,6 +139,7 @@ Steps:
 Expected:
 
 - manager dashboard shows a clear client identifier;
+- dashboard groups show `Без менеджера`, `Закреплено за мной`, `Закреплено за другим менеджером`, `Завершено`;
 - assigned manager becomes the current manager;
 - helper text explains that accepting means закрепить диалог за собой;
 - manager message appears in dialogue history;
@@ -175,6 +177,7 @@ Steps:
 Expected:
 
 - report appears in `Отчеты по рекламе`;
+- upload does not show `Клиент обращения не найден` for a registered client appeal;
 - client can download/open the report;
 - report question creates a new appeal with report title/description as context.
 
@@ -196,8 +199,69 @@ Expected:
 - comment appears in the list;
 - active comment can be selected by response generation for matching category and tone.
 - prepared comments are readable as wide cards without horizontal scrolling at normal desktop width.
+- `Приоритет` is shown in its own clear area, and edit/delete buttons align consistently.
 
-## 12. Fallback when llama.cpp is disabled
+## 12. Manager finishes appeal and client rates manager
+
+Steps:
+
+1. Login as `manager`.
+2. Open an assigned appeal.
+3. Click `Завершить обращение`.
+4. Login as the client who owns the appeal.
+5. Open the completed appeal.
+6. Select a rating from 1 to 5 and optionally add a comment.
+
+Expected:
+
+- appeal status becomes `Закрыто`;
+- the client sees the manager rating form;
+- duplicate rating is rejected or not shown after the first rating;
+- manager dashboard/detail shows average rating and number of rated completed appeals.
+
+## 13. AI answer like/dislike
+
+Steps:
+
+1. Login as `client`.
+2. Open an appeal with an automatic system answer.
+3. Click `Нравится`.
+4. Click `Не нравится`, choose `Слишком общий ответ`, and save.
+5. Login as `admin` and open `/admin/dashboard`.
+
+Expected:
+
+- the selected feedback is saved;
+- admin dashboard shows total likes, dislikes, helpfulness percentage and dislike reason distribution.
+
+## 14. Manager clients section
+
+Steps:
+
+1. Login as `manager`.
+2. Open `/manager/clients`.
+
+Expected:
+
+- all registered clients are visible;
+- each row shows client identifier, name/login/email, total appeals, active appeals, last appeal date and last uploaded report date.
+
+## 15. Unusual question fallback
+
+Message:
+
+```text
+Как вам котик?
+```
+
+Expected:
+
+- response is polite and light;
+- response redirects to advertising context;
+- response asks 1-2 useful questions;
+- response does not expose internal words like `fallback`, `llama.cpp`, `local_rules`, `prompt`.
+
+## 16. Fallback when llama.cpp is disabled
 
 Set:
 
@@ -209,7 +273,7 @@ Expected:
 
 - `generated_responses.source = local_rules`.
 
-## 13. Fallback when llama.cpp is unavailable
+## 17. Fallback when llama.cpp is unavailable
 
 Set:
 

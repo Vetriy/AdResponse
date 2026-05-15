@@ -28,6 +28,8 @@ class ChatMessageRead(BaseModel):
     content: str
     created_at: datetime
     attachments: list[AttachmentRead] = Field(default_factory=list)
+    ai_feedback_value: str | None = None
+    ai_feedback_reason: str | None = None
 
 
 class ChatSendResponse(BaseModel):
