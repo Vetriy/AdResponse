@@ -24,7 +24,10 @@ class ChatSendResponse(BaseModel):
     client_message: ChatMessageRead
     system_message: ChatMessageRead
     category: str
+    category_label: str
     emotional_tone: str
+    emotional_tone_label: str
+    status_label: str | None = None
     handover_offered: bool
     clarifying_questions: list[str]
 
@@ -33,5 +36,8 @@ class ConversationHistoryResponse(BaseModel):
     conversation_id: int
     messages: list[ChatMessageRead]
     category: str | None = None
+    category_label: str | None = None
     emotional_tone: str | None = None
+    emotional_tone_label: str | None = None
     status: str | None = None
+    status_label: str | None = None

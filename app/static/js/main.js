@@ -20,7 +20,7 @@ if (chatWidget) {
   const categoryEl = document.querySelector("[data-chat-category]");
   const toneEl = document.querySelector("[data-chat-tone]");
   const handoverEl = document.querySelector("[data-chat-handover]");
-  const storageKey = "adresponseConversationId";
+  let conversationId = chatWidget.dataset.conversationId ? Number(chatWidget.dataset.conversationId) : null;
 
   const setError = (message) => {
     if (!errorEl) return;
@@ -31,7 +31,9 @@ if (chatWidget) {
   const setLoading = (isLoading) => {
     submitEl.disabled = isLoading;
     inputEl.disabled = isLoading;
-    statusEl.textContent = isLoading ? "Готовим ответ..." : "Готов принять обращение";
+    if (statusEl) {
+      statusEl.textContent = isLoading ? "Готовим ответ..." : "Готов принять обращение";
+    }
   };
 
   const clearEmptyState = () => {
@@ -63,11 +65,12 @@ if (chatWidget) {
     return bubble;
   };
 
-  const updateAnalysis = ({ category, emotional_tone: emotionalTone, handover_offered: handoverOffered, status }) => {
-    if (categoryEl && category) categoryEl.textContent = `категория: ${category}`;
-    if (toneEl && emotionalTone) toneEl.textContent = `тон: ${emotionalTone}`;
+  const updateAnalysis = ({ category, category_label: categoryLabel, emotional_tone: emotionalTone, emotional_tone_label: toneLabel, handover_offered: handoverOffered, status }) => {
+    if (categoryEl && (categoryLabel || category)) categoryEl.textContent = `категория: ${categoryLabel || category}`;
+    if (toneEl && (toneLabel || emotionalTone)) toneEl.textContent = `тон: ${toneLabel || emotionalTone}`;
     if (handoverEl) {
-      const handoverText = handoverOffered || status === "needs_manager" ? "предложен" : "не требуется";
+      const managerStatuses = ["needs_manager", "handover_requested", "assigned_to_manager", "manager_answered"];
+      const handoverText = handoverOffered || managerStatuses.includes(status) ? "предложен" : "не требуется";
       handoverEl.textContent = `менеджер: ${handoverText}`;
     }
   };
@@ -85,7 +88,6 @@ if (chatWidget) {
   };
 
   const loadHistory = async () => {
-    const conversationId = localStorage.getItem(storageKey);
     if (!conversationId) return;
 
     try {
@@ -98,7 +100,7 @@ if (chatWidget) {
       }
       updateAnalysis(history);
     } catch (error) {
-      localStorage.removeItem(storageKey);
+      conversationId = null;
       setError(error.message);
     }
   };
@@ -116,7 +118,7 @@ if (chatWidget) {
 
     try {
       const payload = {
-        conversation_id: localStorage.getItem(storageKey) ? Number(localStorage.getItem(storageKey)) : null,
+        conversation_id: conversationId,
         content,
       };
       const result = await requestJson("/chat/api/messages", {
@@ -124,7 +126,8 @@ if (chatWidget) {
         body: JSON.stringify(payload),
       });
 
-      localStorage.setItem(storageKey, String(result.conversation_id));
+      conversationId = Number(result.conversation_id);
+      chatWidget.dataset.conversationId = String(result.conversation_id);
       loadingBubble.remove();
       appendMessage("system", result.system_message.content);
       updateAnalysis(result);
@@ -137,5 +140,7 @@ if (chatWidget) {
     }
   });
 
-  loadHistory();
+  if (conversationId && chatWidget.dataset.preloaded !== "true") {
+    loadHistory();
+  }
 }

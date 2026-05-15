@@ -55,6 +55,7 @@ def test_fallback_response_uses_manager_comments_and_safe_rules() -> None:
     assert result.handover_offered is False
     assert "Уточните нишу" in result.text
     assert "Чтобы продолжить" in result.text
+    assert "подготовленных комментариев менеджера" not in result.text.lower()
 
 
 def test_fallback_response_offers_handover_for_negative_request() -> None:

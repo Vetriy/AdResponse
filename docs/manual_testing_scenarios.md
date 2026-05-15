@@ -20,6 +20,8 @@ Demo accounts:
 
 Login as `client`.
 
+Open `/client/dashboard`, then click `Новое обращение` or open `/chat/`.
+
 Message:
 
 ```text
@@ -28,9 +30,10 @@ Message:
 
 Expected:
 
-- category: `service cost`;
-- tone: `neutral` or `interested`;
+- category is shown as `Стоимость услуг`;
+- tone is shown as `Нейтральный` or `Заинтересованный`;
 - response asks clarifying questions and does not invent exact price.
+- response does not expose internal phrases about prepared manager comments, fallback, llama.cpp or system rules.
 
 ## 2. Campaign launch request
 
@@ -42,7 +45,7 @@ Message:
 
 Expected:
 
-- category: `campaign launch`;
+- category is shown as `Запуск рекламной кампании`;
 - response asks about product, audience, region, site or materials if missing.
 
 ## 3. Negative request about poor results
@@ -55,8 +58,8 @@ Message:
 
 Expected:
 
-- category: `low number of leads` or `dissatisfaction with campaign results`;
-- tone: `disappointed`;
+- category is shown as `Мало заявок` or `Недовольство результатами`;
+- tone is shown as `Недовольный`;
 - calm supportive response;
 - manager handover is offered.
 
@@ -70,7 +73,7 @@ Message:
 
 Expected:
 
-- category: `low number of leads`;
+- category is shown as `Мало заявок`;
 - response asks about period, channel and current metrics;
 - handover may be offered.
 
@@ -84,7 +87,7 @@ Message:
 
 Expected:
 
-- category: `limited budget`;
+- category is shown as `Ограниченный бюджет`;
 - response asks about upper budget boundary and priority goal.
 
 ## 6. Contact manager request
@@ -97,11 +100,29 @@ Message:
 
 Expected:
 
-- category: `contact manager request`;
+- category is shown as `Связь с менеджером`;
 - handover is offered;
 - appeal appears in manager dashboard.
 
-## 7. Manager accepts appeal and sends manual response
+## 7. New appeal is separate from existing appeal
+
+Steps:
+
+1. Login as `client`.
+2. Create one appeal through `/chat/`.
+3. Return to `/client/dashboard`.
+4. Open the created appeal and send a continuation message.
+5. Return to `/client/dashboard`.
+6. Click `Новое обращение` and send a different message.
+
+Expected:
+
+- continuation message is saved in the selected old appeal;
+- the second message from `/chat/` creates a separate appeal;
+- after logout/login, old appeals are still visible in `/client/dashboard`;
+- client cannot open another client's appeal by changing the URL id.
+
+## 8. Manager accepts appeal and sends manual response
 
 Steps:
 
@@ -115,11 +136,12 @@ Steps:
 
 Expected:
 
-- assigned manager becomes `Дежурный менеджер`;
+- manager dashboard shows a clear client identifier;
+- assigned manager becomes the current manager;
 - manager message appears in dialogue history;
-- appeal status becomes `manager_answered`.
+- appeal status is shown as `Менеджер ответил`.
 
-## 8. Admin adds prepared manager comment
+## 9. Admin adds prepared manager comment
 
 Steps:
 
@@ -134,8 +156,9 @@ Expected:
 
 - comment appears in the list;
 - active comment can be selected by response generation for matching category and tone.
+- prepared comments block is wide and readable without horizontal scrolling at normal desktop width.
 
-## 9. Fallback when llama.cpp is disabled
+## 10. Fallback when llama.cpp is disabled
 
 Set:
 
@@ -147,7 +170,7 @@ Expected:
 
 - `generated_responses.source = local_rules`.
 
-## 10. Fallback when llama.cpp is unavailable
+## 11. Fallback when llama.cpp is unavailable
 
 Set:
 

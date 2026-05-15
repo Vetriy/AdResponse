@@ -373,11 +373,14 @@ p {
 }
 
 .status-new,
+.status-auto_answered,
 .status-needs_clarification {
   background: var(--blue);
 }
 
 .status-needs_manager,
+.status-handover_requested,
+.status-assigned_to_manager,
 .status-accepted {
   background: var(--lavender);
 }
@@ -651,6 +654,16 @@ p {
   font-size: 0.92rem;
 }
 
+.cell-wrap,
+.table-note {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.cell-main {
+  min-width: 320px;
+}
+
 .table-actions,
 .inline-actions {
   display: flex;
@@ -763,6 +776,44 @@ p {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+}
+
+.knowledge-layout--stacked {
+  grid-template-columns: 1fr;
+}
+
+.knowledge-comments .data-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.knowledge-comments .data-table th:nth-child(1),
+.knowledge-comments .data-table td:nth-child(1) {
+  width: 18%;
+}
+
+.knowledge-comments .data-table th:nth-child(2),
+.knowledge-comments .data-table td:nth-child(2) {
+  width: 14%;
+}
+
+.knowledge-comments .data-table th:nth-child(4),
+.knowledge-comments .data-table td:nth-child(4) {
+  width: 92px;
+}
+
+.knowledge-comments .data-table th:nth-child(5),
+.knowledge-comments .data-table td:nth-child(5) {
+  width: 112px;
+}
+
+.knowledge-comments .data-table th:nth-child(6),
+.knowledge-comments .data-table td:nth-child(6) {
+  width: 150px;
+}
+
+.knowledge-categories .category-list {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .category-list article {

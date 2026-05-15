@@ -84,7 +84,7 @@ def generate_fallback_response(
         parts.append("Спасибо за обращение. Мы зафиксировали ваш запрос и можем подготовить первичный ответ по имеющимся данным.")
 
     if knowledge_items:
-        parts.append("На основе подготовленных комментариев менеджера:")
+        parts.append("По вашему обращению можем сориентировать так:")
         parts.extend(f"- {item.content}" for item in knowledge_items[:2])
     else:
         parts.append(
@@ -96,7 +96,10 @@ def generate_fallback_response(
         parts.extend(f"{index}. {question}" for index, question in enumerate(questions, start=1))
 
     if handover_offered:
-        parts.append("Если вопрос срочный или требует детального разбора, мы можем передать диалог менеджеру с сохранением истории.")
+        if category == "contact manager request":
+            parts.append("Мы можем передать обращение менеджеру. Если удобно, укажите способ связи и краткий контекст задачи.")
+        else:
+            parts.append("Если вопрос требует детального разбора, мы можем передать диалог менеджеру с сохранением истории.")
 
     return GeneratedChatResponse(
         text="\n".join(parts),

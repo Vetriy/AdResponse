@@ -9,19 +9,39 @@
   {% if not appeal %}
     <section class="empty-state card"><h2>Обращение не найдено</h2><p>Оно могло принадлежать другому пользователю.</p></section>
   {% else %}
-    <section class="card chat-window">
+    <section class="chat-layout">
+    <div class="card chat-window" data-chat-widget data-conversation-id="{{ appeal.conversation.id }}" data-preloaded="true" data-storage="off">
       <div class="chat-header">
-        <div><strong>История диалога</strong><span>{{ appeal.status }}</span></div>
-        <span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span>
+        <div><strong>История диалога</strong><span>{{ status_label(appeal.status) }}</span></div>
+        <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
       </div>
-      <div class="chat-messages chat-messages--manager">
+      <div class="chat-messages chat-messages--manager" aria-live="polite" aria-label="История сообщений" data-chat-messages>
         {% for message in appeal.conversation.messages %}
           <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
-            <small>{{ message.sender_type }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+            <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
             {{ message.content }}
           </div>
         {% endfor %}
       </div>
+      <form class="form chat-form" data-chat-form>
+        <label for="message">Продолжить обращение</label>
+        <div class="chat-input-row">
+          <textarea id="message" rows="3" placeholder="Напишите уточнение или ответ менеджеру" data-chat-input></textarea>
+          <button class="button button--primary" type="submit" data-chat-submit>Отправить</button>
+        </div>
+        <p class="form-hint" data-chat-error hidden></p>
+      </form>
+    </div>
+
+    <aside class="card side-panel">
+      <h2>Сводка</h2>
+      <div class="stack">
+        <span class="badge badge--lavender" data-chat-category>категория: {{ appeal_category_label(appeal) }}</span>
+        <span class="badge badge--peach" data-chat-tone>тон: {{ tone_label(appeal.emotional_tone) }}</span>
+        <span class="badge badge--mint" data-chat-handover>менеджер: {{ "предложен" if appeal.status in ["needs_manager", "handover_requested", "assigned_to_manager", "manager_answered"] else "по ситуации" }}</span>
+      </div>
+      <p>Это выбранное обращение. Новое обращение создается отдельно через страницу чата.</p>
+    </aside>
     </section>
   {% endif %}
 {% endblock %}

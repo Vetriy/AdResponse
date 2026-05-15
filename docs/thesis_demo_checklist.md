@@ -26,23 +26,25 @@ uvicorn app.main:app --reload
 
 1. Open the home page and briefly explain the goal.
 2. Login as `admin`.
-3. Open `/admin/users` and show role-based accounts.
-4. Open `/admin/knowledge-base` and show categories and prepared comments.
-5. Add a prepared manager comment for a category.
-6. Logout and login as `client`.
-7. Open `/chat/`.
-8. Send a neutral cost request.
-9. Show category, tone, clarifying questions and safe answer.
-10. Send a negative or low-leads request.
-11. Show supportive answer and manager handover recommendation.
-12. Logout and login as `manager`.
-13. Open `/manager/`.
-14. Show the appeal list and filters.
-15. Open appeal detail.
-16. Accept the appeal.
-17. Send a manual manager response.
-18. Show that the full dialogue history is preserved.
-19. Explain fallback mode and optional local `llama.cpp` mode.
+3. Show clean admin navigation: `Главная`, `Админ`, `Пользователи`, `База знаний`, `Выход`.
+4. Open `/admin/users` and show role-based accounts.
+5. Open `/admin/knowledge-base` and show categories and the wide prepared comments block.
+6. Add a prepared manager comment for a category.
+7. Logout and login as `client`.
+8. Open `/chat/` and send a neutral cost request.
+9. Show Russian category, Russian tone, clarifying questions and safe answer.
+10. Return to `/client/dashboard`, open the appeal and continue the same dialogue.
+11. Click `Новое обращение` and show that a separate appeal is created.
+12. Send a negative or low-leads request.
+13. Show supportive answer and manager handover recommendation.
+14. Logout and login as `manager`.
+15. Open `/manager/`.
+16. Show the appeal list, filters and client identifier.
+17. Open appeal detail.
+18. Accept the appeal.
+19. Send a manual manager response.
+20. Show that the client sees the manager answer in the same appeal history.
+21. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize
 
@@ -58,12 +60,16 @@ uvicorn app.main:app --reload
 - [ ] Client can send a message.
 - [ ] Login/logout works.
 - [ ] Role-specific navigation works.
+- [ ] Role-specific navigation has no duplicated primary items.
 - [ ] Message is stored.
 - [ ] Request is classified.
 - [ ] Emotional tone is detected.
+- [ ] Statuses, categories and tones are displayed in Russian.
 - [ ] Prepared comments are selected.
 - [ ] Fallback or llama.cpp response is generated.
+- [ ] New client appeal is separate from continuing an old appeal.
 - [ ] Manager can view appeals.
+- [ ] Manager can distinguish clients by identifier.
 - [ ] Manager can accept an appeal.
 - [ ] Manager can send a manual response.
 - [ ] Admin can manage categories.
@@ -72,7 +78,6 @@ uvicorn app.main:app --reload
 
 ## Honest limitations
 
-- No authentication or real user accounts in the UI.
 - No production deployment scripts.
 - No advanced semantic search for knowledge base comments.
 - Local NLP uses keyword rules.

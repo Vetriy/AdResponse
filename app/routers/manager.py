@@ -8,12 +8,21 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import Appeal, Category, Conversation, Message, User
+from app.models import Appeal, Category, ClientSession, Conversation, Message, User
 
 templates = create_templates()
 router = APIRouter(prefix="/manager", tags=["manager dashboard"])
 
-APPEAL_STATUSES = ("new", "needs_clarification", "needs_manager", "accepted", "manager_answered", "closed")
+APPEAL_STATUSES = (
+    "new",
+    "auto_answered",
+    "needs_clarification",
+    "handover_requested",
+    "needs_manager",
+    "assigned_to_manager",
+    "manager_answered",
+    "closed",
+)
 EMOTIONAL_TONES = ("neutral", "interested", "anxious", "disappointed", "irritated", "negative")
 PLACEHOLDER_MANAGER_EMAIL = "manager@example.local"
 
@@ -94,6 +103,7 @@ async def manager_dashboard(
                 selectinload(Appeal.category),
                 selectinload(Appeal.assigned_manager),
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
+                selectinload(Appeal.conversation).selectinload(Conversation.client_session).selectinload(ClientSession.user),
             )
             .order_by(Appeal.created_at.desc())
         )
@@ -175,6 +185,7 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 selectinload(Appeal.generated_responses),
                 selectinload(Appeal.handover_requests),
                 selectinload(Appeal.conversation).selectinload(Conversation.messages),
+                selectinload(Appeal.conversation).selectinload(Conversation.client_session).selectinload(ClientSession.user),
             )
         )
         if appeal and current_user.role == "manager" and appeal.assigned_manager_id not in {None, current_user.id}:
@@ -232,7 +243,7 @@ async def accept_appeal(request: Request, appeal_id: int) -> RedirectResponse:
         appeal = db.get(Appeal, appeal_id)
         if appeal:
             appeal.assigned_manager_id = current_user.id
-            appeal.status = "accepted"
+            appeal.status = "assigned_to_manager"
             db.commit()
     finally:
         db.close()

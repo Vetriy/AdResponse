@@ -13,8 +13,8 @@
       <p>{{ db_error }}</p>
     </section>
   {% else %}
-    <section class="knowledge-layout">
-      <div class="card">
+    <section class="knowledge-layout knowledge-layout--stacked">
+      <div class="card knowledge-comments">
         <div class="table-card__header">
           <h2>Подготовленные комментарии</h2>
           <a class="button button--primary" href="/admin/knowledge-base/items/new">Добавить</a>
@@ -36,9 +36,9 @@
               <tbody>
                 {% for item in items %}
                   <tr>
-                    <td>{{ item.category.name }}</td>
-                    <td><span class="badge tone-{{ item.emotional_tone }}">{{ item.emotional_tone }}</span></td>
-                    <td>
+                    <td class="cell-wrap">{{ category_label(item.category.name) }}</td>
+                    <td class="cell-wrap"><span class="badge tone-{{ item.emotional_tone }}">{{ tone_label(item.emotional_tone) }}</span></td>
+                    <td class="cell-wrap cell-main">
                       <strong>{{ item.title }}</strong>
                       <p class="table-note">{{ item.content }}</p>
                     </td>
@@ -63,7 +63,7 @@
         {% endif %}
       </div>
 
-      <aside class="card side-panel">
+      <aside class="card side-panel knowledge-categories">
         <div class="table-card__header">
           <h2>Категории</h2>
           <a class="button button--secondary" href="/admin/categories/new">Добавить</a>
@@ -73,7 +73,7 @@
           {% for category in categories %}
             <article>
               <div>
-                <strong>{{ category.name }}</strong>
+                <strong>{{ category_label(category.name) }}</strong>
                 <span>{{ category.slug }}</span>
               </div>
               <span class="badge {{ 'badge--mint' if category.is_active else 'badge--peach' }}">{{ "активна" if category.is_active else "выключена" }}</span>

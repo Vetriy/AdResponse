@@ -16,14 +16,14 @@
       <label for="category_id">Категория</label>
       <select id="category_id" name="category_id" required>
         {% for category in categories %}
-          <option value="{{ category.id }}" {% if item and item.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+          <option value="{{ category.id }}" {% if item and item.category_id == category.id %}selected{% endif %}>{{ category_label(category.name) }}</option>
         {% endfor %}
       </select>
 
       <label for="emotional_tone">Эмоциональный тон</label>
       <select id="emotional_tone" name="emotional_tone">
         {% for tone in tones %}
-          <option value="{{ tone }}" {% if item and item.emotional_tone == tone %}selected{% endif %}>{{ tone }}</option>
+          <option value="{{ tone }}" {% if item and item.emotional_tone == tone %}selected{% endif %}>{{ tone_label(tone) }}</option>
         {% endfor %}
       </select>
 

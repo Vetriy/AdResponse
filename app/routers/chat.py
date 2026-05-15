@@ -15,6 +15,7 @@ from app.schemas.chat import (
     ConversationHistoryResponse,
 )
 from app.services.chat_workflow import create_conversation, get_conversation, process_client_message
+from app.services.labels import category_label, status_label, tone_label
 
 templates = create_templates()
 router = APIRouter(prefix="/chat", tags=["client chat"])
@@ -101,8 +102,11 @@ def read_chat_history(request: Request, conversation_id: int, db: Session = Depe
         conversation_id=conversation.id,
         messages=[serialize_message(message) for message in conversation.messages],
         category=appeal.request_category if appeal else None,
+        category_label=category_label(appeal.request_category) if appeal else None,
         emotional_tone=appeal.emotional_tone if appeal else None,
+        emotional_tone_label=tone_label(appeal.emotional_tone) if appeal else None,
         status=appeal.status if appeal else conversation.status,
+        status_label=status_label(appeal.status if appeal else conversation.status),
     )
 
 
@@ -130,7 +134,10 @@ def send_chat_message(request: Request, payload: ChatMessageCreate, db: Session 
         client_message=serialize_message(client_message),
         system_message=serialize_message(system_message),
         category=appeal.request_category or "other",
+        category_label=category_label(appeal.request_category),
         emotional_tone=appeal.emotional_tone or "neutral",
+        emotional_tone_label=tone_label(appeal.emotional_tone),
+        status_label=status_label(appeal.status),
         handover_offered=handover_offered,
         clarifying_questions=questions,
     )

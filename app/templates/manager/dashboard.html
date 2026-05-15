@@ -40,7 +40,7 @@
           <select name="status">
             <option value="">Все</option>
             {% for status in statuses %}
-              <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+              <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status_label(status) }}</option>
             {% endfor %}
           </select>
         </label>
@@ -49,7 +49,7 @@
           <select name="category">
             <option value="">Все</option>
             {% for category in categories %}
-              <option value="{{ category.id }}" {% if filters.category == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+              <option value="{{ category.id }}" {% if filters.category == category.id|string %}selected{% endif %}>{{ category_label(category.name) }}</option>
             {% endfor %}
           </select>
         </label>
@@ -58,7 +58,7 @@
           <select name="tone">
             <option value="">Все</option>
             {% for tone in tones %}
-              <option value="{{ tone }}" {% if filters.tone == tone %}selected{% endif %}>{{ tone }}</option>
+              <option value="{{ tone }}" {% if filters.tone == tone %}selected{% endif %}>{{ tone_label(tone) }}</option>
             {% endfor %}
           </select>
         </label>
@@ -71,6 +71,7 @@
             <thead>
               <tr>
                 <th>ID</th>
+                <th>Клиент</th>
                 <th>Категория</th>
                 <th>Тон</th>
                 <th>Статус</th>
@@ -83,9 +84,10 @@
               {% for appeal in appeals %}
                 <tr>
                   <td>#{{ appeal.id }}</td>
-                  <td>{{ appeal.category.name if appeal.category else appeal.request_category or "other" }}</td>
-                  <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ appeal.emotional_tone or "neutral" }}</span></td>
-                  <td><span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span></td>
+                  <td>{{ client_identifier(appeal) }}</td>
+                  <td>{{ appeal_category_label(appeal) }}</td>
+                  <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span></td>
+                  <td><span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span></td>
                   <td>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
                   <td>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</td>
                   <td><a class="button button--secondary button--small" href="/manager/appeals/{{ appeal.id }}">Открыть</a></td>

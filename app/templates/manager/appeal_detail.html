@@ -30,13 +30,13 @@
             <strong>Диалог</strong>
             <span>{{ appeal.conversation.title or "Клиентский чат" }}</span>
           </div>
-          <span class="badge status-{{ appeal.status }}">{{ appeal.status }}</span>
+          <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
         </div>
 
         <div class="chat-messages chat-messages--manager">
           {% for message in appeal.conversation.messages %}
             <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
-              <small>{{ message.sender_type }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+              <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
               {{ message.content }}
             </div>
           {% else %}
@@ -58,9 +58,11 @@
         <h2>Сводка</h2>
         <div class="detail-list">
           <span>Категория</span>
-          <strong>{{ appeal.category.name if appeal.category else appeal.request_category or "other" }}</strong>
+          <strong>{{ appeal_category_label(appeal) }}</strong>
           <span>Эмоциональный тон</span>
-          <strong>{{ appeal.emotional_tone or "neutral" }}</strong>
+          <strong>{{ tone_label(appeal.emotional_tone) }}</strong>
+          <span>Клиент</span>
+          <strong>{{ client_identifier(appeal) }}</strong>
           <span>Менеджер</span>
           <strong>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</strong>
           <span>Создано</span>
@@ -75,7 +77,7 @@
           <label for="status">Изменить статус</label>
           <select id="status" name="status">
             {% for status in statuses %}
-              <option value="{{ status }}" {% if appeal.status == status %}selected{% endif %}>{{ status }}</option>
+              <option value="{{ status }}" {% if appeal.status == status %}selected{% endif %}>{{ status_label(status) }}</option>
             {% endfor %}
           </select>
           <button class="button button--primary" type="submit">Сохранить статус</button>

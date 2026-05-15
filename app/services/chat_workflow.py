@@ -90,7 +90,7 @@ def process_client_message(
     appeal.category_id = category.id if category else None
     appeal.request_category = classification.category
     appeal.emotional_tone = sentiment.emotional_tone
-    appeal.status = "needs_manager" if generated.handover_offered else "needs_clarification" if generated.clarifying_questions else "auto_response"
+    appeal.status = "needs_manager" if generated.handover_offered else "needs_clarification" if generated.clarifying_questions else "auto_answered"
     appeal.priority = "high" if generated.handover_offered else "normal"
 
     system_message = Message(
