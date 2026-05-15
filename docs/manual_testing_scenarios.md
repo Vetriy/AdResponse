@@ -200,6 +200,8 @@ Expected:
 - active comment can be selected by response generation for matching category and tone.
 - prepared comments are readable as wide cards without horizontal scrolling at normal desktop width.
 - `Приоритет` is shown in its own clear area, and edit/delete buttons align consistently.
+- category toggle says `Выключить` for active categories and `Включить` for inactive categories;
+- after toggling, the page returns to the categories section.
 
 ## 12. Manager finishes appeal and client rates manager
 
@@ -232,6 +234,8 @@ Steps:
 Expected:
 
 - the selected feedback is saved;
+- only one feedback button is visually active at once;
+- custom reason appears only after selecting `Другое`;
 - admin dashboard shows total likes, dislikes, helpfulness percentage and dislike reason distribution.
 
 ## 14. Manager clients section
@@ -245,6 +249,8 @@ Expected:
 
 - all registered clients are visible;
 - each row shows client identifier, name/login/email, total appeals, active appeals, last appeal date and last uploaded report date.
+- `К обращениям` opens `/manager/dashboard` filtered by that client;
+- the dashboard heading says `Обращения клиента: ...` and has `Все обращения`.
 
 ## 15. Unusual question fallback
 

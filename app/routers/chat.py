@@ -79,6 +79,7 @@ def serialize_message(message: Message, feedback_map: dict[int, object] | None =
         attachments=[serialize_attachment(attachment) for attachment in message.attachments],
         ai_feedback_value=feedback.value if feedback else None,
         ai_feedback_reason=feedback.reason if feedback else None,
+        ai_feedback_custom_reason=feedback.custom_reason if feedback else None,
     )
 
 

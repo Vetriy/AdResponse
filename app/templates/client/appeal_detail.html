@@ -39,12 +39,12 @@
                 <button class="feedback-chip {% if saved_feedback and saved_feedback.value == 'dislike' %}is-selected{% endif %}" type="button" data-dislike-toggle>Не нравится</button>
                 <div class="dislike-panel" {% if not saved_feedback or saved_feedback.value != 'dislike' %}hidden{% endif %}>
                   <input type="hidden" name="value" value="dislike">
-                  <select name="reason">
+                  <select name="reason" data-dislike-reason>
                     {% for key, label in dislike_reasons.items() %}
                       <option value="{{ key }}" {% if saved_feedback and saved_feedback.reason == key %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
-                  <input name="custom_reason" maxlength="300" placeholder="Если выбрали другое" value="{{ saved_feedback.custom_reason if saved_feedback and saved_feedback.custom_reason else '' }}">
+                  <input name="custom_reason" data-custom-reason maxlength="300" placeholder="Укажите причину" value="{{ saved_feedback.custom_reason if saved_feedback and saved_feedback.custom_reason else '' }}" {% if not saved_feedback or saved_feedback.reason != "other" %}hidden{% endif %}>
                   <button class="button button--secondary button--small" type="submit">Сохранить</button>
                 </div>
                 <small data-feedback-status>{% if saved_feedback %}Оценка сохранена{% endif %}</small>

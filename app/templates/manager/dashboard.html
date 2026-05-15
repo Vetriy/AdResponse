@@ -35,11 +35,20 @@
 
     <section class="card table-card">
       <div class="table-card__header">
-        <h2>Список обращений</h2>
+        <h2>{% if client_filter %}Обращения клиента: {{ client_filter.full_name or client_filter.username or client_filter.email }}{% else %}Список обращений{% endif %}</h2>
         <span class="badge badge--blue">{{ appeals|length }}</span>
       </div>
+      {% if client_filter %}
+        <div class="filter-notice">
+          <span>Показаны только обращения клиента №{{ client_filter.id }}.</span>
+          <a class="button button--secondary button--small" href="/manager/dashboard">Все обращения</a>
+        </div>
+      {% endif %}
 
       <form class="filter-bar" method="get" action="/manager/">
+        {% if filters.client_id %}
+          <input type="hidden" name="client_id" value="{{ filters.client_id }}">
+        {% endif %}
         <label>
           <span>Статус</span>
           <select name="status">

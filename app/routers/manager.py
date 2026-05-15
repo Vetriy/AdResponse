@@ -66,6 +66,7 @@ async def manager_dashboard(
     status: str = "",
     category: str = "",
     tone: str = "",
+    client_id: int | None = None,
 ) -> HTMLResponse:
     if not request.session.get("user"):
         return login_redirect(request)
@@ -82,9 +83,10 @@ async def manager_dashboard(
                 "categories": [],
                 "statuses": APPEAL_STATUSES,
                 "tones": EMOTIONAL_TONES,
-                "filters": {"status": status, "category": category, "tone": tone},
+                "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
                 "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "client_filter": None,
                 "rating_summary": None,
                 "db_error": database_error_message(error),
             },
@@ -117,6 +119,13 @@ async def manager_dashboard(
             statement = statement.where(Appeal.category_id == int(category))
         if tone:
             statement = statement.where(Appeal.emotional_tone == tone)
+        client_filter = None
+        if client_id:
+            client_filter = db.get(User, client_id)
+            if client_filter and client_filter.role == "client":
+                statement = statement.join(Appeal.conversation).join(Conversation.client_session).where(ClientSession.user_id == client_filter.id)
+            else:
+                client_filter = None
 
         appeals = list(db.scalars(statement))
         appeal_groups = group_manager_appeals(appeals, current_user.id if current_user.role == "manager" else None)
@@ -130,9 +139,10 @@ async def manager_dashboard(
                 "categories": categories,
                 "statuses": APPEAL_STATUSES,
                 "tones": EMOTIONAL_TONES,
-                "filters": {"status": status, "category": category, "tone": tone},
+                "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": metrics,
                 "appeal_groups": appeal_groups,
+                "client_filter": client_filter,
                 "rating_summary": manager_rating_summary(db, current_user.id if current_user.role == "manager" else None),
                 "db_error": None,
             },
@@ -148,9 +158,10 @@ async def manager_dashboard(
                 "categories": [],
                 "statuses": APPEAL_STATUSES,
                 "tones": EMOTIONAL_TONES,
-                "filters": {"status": status, "category": category, "tone": tone},
+                "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
                 "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "client_filter": None,
                 "rating_summary": None,
                 "db_error": database_error_message(error),
             },
@@ -236,13 +247,13 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
 
 
 @router.get("/dashboard")
-async def manager_dashboard_alias(request: Request, status: str = "", category: str = "", tone: str = ""):
-    return await manager_dashboard(request, status=status, category=category, tone=tone)
+async def manager_dashboard_alias(request: Request, status: str = "", category: str = "", tone: str = "", client_id: int | None = None):
+    return await manager_dashboard(request, status=status, category=category, tone=tone, client_id=client_id)
 
 
 @router.get("/appeals")
-async def manager_appeals_alias(request: Request, status: str = "", category: str = "", tone: str = ""):
-    return await manager_dashboard(request, status=status, category=category, tone=tone)
+async def manager_appeals_alias(request: Request, status: str = "", category: str = "", tone: str = "", client_id: int | None = None):
+    return await manager_dashboard(request, status=status, category=category, tone=tone, client_id=client_id)
 
 
 @router.get("/clients", response_class=HTMLResponse)

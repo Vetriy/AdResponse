@@ -99,3 +99,42 @@ def test_unusual_question_fallback_is_human_and_ad_context_safe() -> None:
     assert len(result.clarifying_questions) == 2
     for forbidden in ("prepared", "fallback", "llama", "local_rules", "prompt", "подготовленные комментарии"):
         assert forbidden not in lowered
+
+
+def test_dental_clinic_advertising_request_is_not_treated_as_offtopic() -> None:
+    result = generate_fallback_response(
+        "Нужна реклама для стоматологической клиники, сколько стоит продвижение?",
+        "service cost",
+        "neutral",
+        [],
+    )
+    lowered = result.text.lower()
+
+    assert "если вопрос не про рекламу" not in lowered
+    assert "продвиж" in lowered or "реклам" in lowered
+    assert result.clarifying_questions
+
+
+def test_new_chat_without_report_context_does_not_mention_report() -> None:
+    result = generate_fallback_response(
+        "Хотим запустить рекламу для стоматологической клиники",
+        "campaign launch",
+        "neutral",
+        [],
+        report_context=None,
+    )
+
+    assert "вопрос связан с отчетом" not in result.text.lower()
+
+
+def test_client_response_does_not_expose_internal_phrases() -> None:
+    result = generate_fallback_response(
+        "Сколько стоит реклама для салона?",
+        "service cost",
+        "neutral",
+        [],
+    )
+    lowered = result.text.lower()
+
+    for forbidden in ("fallback", "llama.cpp", "local_rules", "prompt", "подготовленные комментарии менеджера"):
+        assert forbidden not in lowered

@@ -22,6 +22,12 @@ class ManagerRatingSummary:
     rated_count: int
 
 
+@dataclass(frozen=True)
+class ManagerRatingRow:
+    manager: User
+    summary: ManagerRatingSummary
+
+
 def dislike_reason_label(value: str | None) -> str:
     return DISLIKE_REASONS.get(value or "", value or "Причина не указана")
 
@@ -49,6 +55,11 @@ def manager_rating_summary(db: Session, manager_id: int | None = None) -> Manage
         statement = statement.where(AppealFeedback.manager_user_id == manager_id)
     average, count = db.execute(statement).one()
     return ManagerRatingSummary(round(float(average), 2) if average is not None else None, int(count or 0))
+
+
+def manager_rating_rows(db: Session) -> list[ManagerRatingRow]:
+    managers = list(db.scalars(select(User).where(User.role == "manager").order_by(User.full_name.asc(), User.username.asc())))
+    return [ManagerRatingRow(manager=manager, summary=manager_rating_summary(db, manager.id)) for manager in managers]
 
 
 def store_or_update_ai_feedback(

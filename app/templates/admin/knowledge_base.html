@@ -54,7 +54,7 @@
         {% endif %}
       </div>
 
-      <aside class="card side-panel knowledge-categories">
+      <aside class="card side-panel knowledge-categories" id="categories">
         <div class="table-card__header">
           <h2>Категории</h2>
           <a class="button button--secondary" href="/admin/categories/new">Добавить</a>
@@ -71,7 +71,7 @@
               <div class="inline-actions">
                 <a href="/admin/categories/{{ category.id }}/edit">Править</a>
                 <form method="post" action="/admin/categories/{{ category.id }}/delete">
-                  <button type="submit">Выключить</button>
+                  <button type="submit">{{ "Выключить" if category.is_active else "Включить" }}</button>
                 </form>
               </div>
             </article>

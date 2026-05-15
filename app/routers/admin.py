@@ -12,6 +12,7 @@ from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
 from app.services.analytics import build_admin_analytics, status_rows_for_chart
+from app.services.feedback import manager_rating_rows
 
 templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
@@ -87,6 +88,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
                 "active_page": "admin",
                 "stats": stats,
                 "analytics": analytics,
+                "manager_ratings": manager_rating_rows(db),
                 "status_chart_rows": status_rows_for_chart(analytics["appeals"]["status_counts"]),
             },
         )
@@ -305,11 +307,11 @@ async def delete_category(request: Request, category_id: int) -> RedirectRespons
             return admin
         category = db.get(Category, category_id)
         if category:
-            category.is_active = False
+            category.is_active = not category.is_active
             db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#categories")
 
 
 @router.get("/knowledge-base/items/new", response_class=HTMLResponse)
@@ -687,7 +689,7 @@ async def toggle_user_active(request: Request, user_id: int):
         if not hasattr(admin, "id"):
             return admin
         user = db.get(User, user_id)
-        if user and user.id != admin.id:
+        if user and user.role != "admin" and user.id != admin.id:
             user.is_active = not user.is_active
             db.commit()
     finally:

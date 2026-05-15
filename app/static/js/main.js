@@ -68,13 +68,47 @@ if (chatWidget) {
     bubble.appendChild(list);
   };
 
+  const escapeAttribute = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[char]));
+
   const attachFeedbackForm = (form) => {
     const dislikeToggle = form.querySelector("[data-dislike-toggle]");
     const panel = form.querySelector(".dislike-panel");
     const status = form.querySelector("[data-feedback-status]");
+    const reasonSelect = form.querySelector("[data-dislike-reason]");
+    const customInput = form.querySelector("[data-custom-reason]");
+    const likeButton = form.querySelector('.feedback-chip[name="value"][value="like"]');
+    const setCustomVisibility = () => {
+      if (!customInput || !reasonSelect) return;
+      const isOther = reasonSelect.value === "other";
+      customInput.hidden = !isOther;
+      if (!isOther) customInput.value = "";
+    };
+    const setSelectedFeedback = (value) => {
+      form.querySelectorAll(".feedback-chip").forEach((button) => button.classList.remove("is-selected"));
+      if (value === "like" && likeButton) {
+        likeButton.classList.add("is-selected");
+        if (panel) panel.hidden = true;
+        if (reasonSelect) reasonSelect.selectedIndex = 0;
+        setCustomVisibility();
+      }
+      if (value === "dislike" && dislikeToggle) {
+        dislikeToggle.classList.add("is-selected");
+        if (panel) panel.hidden = false;
+      }
+    };
+    if (reasonSelect) {
+      reasonSelect.addEventListener("change", setCustomVisibility);
+      setCustomVisibility();
+    }
     if (dislikeToggle && panel) {
       dislikeToggle.addEventListener("click", () => {
-        panel.hidden = !panel.hidden;
+        setSelectedFeedback("dislike");
       });
     }
     form.addEventListener("submit", async (event) => {
@@ -88,10 +122,7 @@ if (chatWidget) {
         const response = await fetch(form.action, { method: "POST", body });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.detail || "Не удалось сохранить оценку.");
-        form.querySelectorAll(".feedback-chip").forEach((button) => button.classList.remove("is-selected"));
-        const selected = form.querySelector(`[name="value"][value="${result.value}"]`);
-        if (selected && selected.classList.contains("feedback-chip")) selected.classList.add("is-selected");
-        if (result.value === "dislike" && dislikeToggle) dislikeToggle.classList.add("is-selected");
+        setSelectedFeedback(result.value);
         if (status) status.textContent = "Оценка сохранена";
       } catch (error) {
         if (status) status.textContent = error.message;
@@ -106,21 +137,23 @@ if (chatWidget) {
     form.dataset.aiFeedback = "true";
     form.action = `/chat/api/messages/${message.id}/feedback`;
     form.method = "post";
+    const savedReason = message.ai_feedback_reason || "off_topic";
+    const savedCustomReason = escapeAttribute(message.ai_feedback_custom_reason || "");
     form.innerHTML = `
       <span>Оценить ответ</span>
       <button class="feedback-chip ${message.ai_feedback_value === "like" ? "is-selected" : ""}" type="submit" name="value" value="like">Нравится</button>
       <button class="feedback-chip ${message.ai_feedback_value === "dislike" ? "is-selected" : ""}" type="button" data-dislike-toggle>Не нравится</button>
       <div class="dislike-panel" ${message.ai_feedback_value === "dislike" ? "" : "hidden"}>
         <input type="hidden" name="value" value="dislike">
-        <select name="reason">
-          <option value="off_topic">Не по теме</option>
-          <option value="too_general">Слишком общий ответ</option>
-          <option value="not_helpful">Не помог решить вопрос</option>
-          <option value="wrong_info">Ошибочная информация</option>
-          <option value="bad_tone">Неподходящий тон</option>
-          <option value="other">Другое</option>
+        <select name="reason" data-dislike-reason>
+          <option value="off_topic" ${savedReason === "off_topic" ? "selected" : ""}>Не по теме</option>
+          <option value="too_general" ${savedReason === "too_general" ? "selected" : ""}>Слишком общий ответ</option>
+          <option value="not_helpful" ${savedReason === "not_helpful" ? "selected" : ""}>Не помог решить вопрос</option>
+          <option value="wrong_info" ${savedReason === "wrong_info" ? "selected" : ""}>Ошибочная информация</option>
+          <option value="bad_tone" ${savedReason === "bad_tone" ? "selected" : ""}>Неподходящий тон</option>
+          <option value="other" ${savedReason === "other" ? "selected" : ""}>Другое</option>
         </select>
-        <input name="custom_reason" maxlength="300" placeholder="Если выбрали другое">
+        <input name="custom_reason" data-custom-reason maxlength="300" placeholder="Укажите причину" value="${savedCustomReason}">
         <button class="button button--secondary button--small" type="submit">Сохранить</button>
       </div>
       <small data-feedback-status>${message.ai_feedback_value ? "Оценка сохранена" : ""}</small>
@@ -242,9 +275,35 @@ document.querySelectorAll("[data-ai-feedback]").forEach((form) => {
   const dislikeToggle = form.querySelector("[data-dislike-toggle]");
   const panel = form.querySelector(".dislike-panel");
   const status = form.querySelector("[data-feedback-status]");
+  const reasonSelect = form.querySelector("[data-dislike-reason]");
+  const customInput = form.querySelector("[data-custom-reason]");
+  const likeButton = form.querySelector('.feedback-chip[name="value"][value="like"]');
+  const setCustomVisibility = () => {
+    if (!customInput || !reasonSelect) return;
+    const isOther = reasonSelect.value === "other";
+    customInput.hidden = !isOther;
+    if (!isOther) customInput.value = "";
+  };
+  const setSelectedFeedback = (value) => {
+    form.querySelectorAll(".feedback-chip").forEach((button) => button.classList.remove("is-selected"));
+    if (value === "like" && likeButton) {
+      likeButton.classList.add("is-selected");
+      if (panel) panel.hidden = true;
+      if (reasonSelect) reasonSelect.selectedIndex = 0;
+      setCustomVisibility();
+    }
+    if (value === "dislike" && dislikeToggle) {
+      dislikeToggle.classList.add("is-selected");
+      if (panel) panel.hidden = false;
+    }
+  };
+  if (reasonSelect) {
+    reasonSelect.addEventListener("change", setCustomVisibility);
+    setCustomVisibility();
+  }
   if (dislikeToggle && panel) {
     dislikeToggle.addEventListener("click", () => {
-      panel.hidden = !panel.hidden;
+      setSelectedFeedback("dislike");
     });
   }
   form.addEventListener("submit", async (event) => {
@@ -257,9 +316,7 @@ document.querySelectorAll("[data-ai-feedback]").forEach((form) => {
       const response = await fetch(form.action, { method: "POST", body });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.detail || "Не удалось сохранить оценку.");
-      form.querySelectorAll(".feedback-chip").forEach((button) => button.classList.remove("is-selected"));
-      if (result.value === "like") form.querySelector('[name="value"][value="like"]').classList.add("is-selected");
-      if (result.value === "dislike" && dislikeToggle) dislikeToggle.classList.add("is-selected");
+      setSelectedFeedback(result.value);
       if (status) status.textContent = "Оценка сохранена";
     } catch (error) {
       if (status) status.textContent = error.message;

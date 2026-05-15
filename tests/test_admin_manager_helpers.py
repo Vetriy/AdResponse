@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.base import Base
 from app.models import Appeal, AppealFeedback, Category, ClientSession, Conversation, Message, User
 from app.services.analytics import build_admin_analytics, grouped_appeal_status, percent
-from app.services.feedback import manager_rating_summary, normalize_ai_feedback, store_or_update_ai_feedback
+from app.services.feedback import manager_rating_rows, manager_rating_summary, normalize_ai_feedback, store_or_update_ai_feedback
 from app.services.manager_workflow import (
     assignment_group,
     finish_appeal_for_manager,
@@ -100,6 +100,34 @@ def test_ai_feedback_helper_validates_dislike_reason_and_updates() -> None:
     assert dislike.value == "dislike"
     assert dislike.reason == "too_general"
     assert normalize_ai_feedback("like", "other", "text") == ("like", None, None)
+    assert normalize_ai_feedback("dislike", "other", "Свой вариант") == ("dislike", "other", "Свой вариант")
+
+
+def test_ai_feedback_custom_reason_required_only_for_other() -> None:
+    assert normalize_ai_feedback("dislike", "too_general", "") == ("dislike", "too_general", None)
+    try:
+        normalize_ai_feedback("dislike", "other", "")
+    except ValueError as error:
+        assert "причину" in str(error)
+    else:
+        raise AssertionError("Expected custom reason validation for 'other'.")
+
+
+def test_admin_manager_rating_rows_include_unrated_managers() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        manager = User(username="manager", email="m@test.local", full_name="Менеджер", role="manager", hashed_password="x")
+        db.add(manager)
+        db.commit()
+
+        rows = manager_rating_rows(db)
+
+    assert len(rows) == 1
+    assert rows[0].manager.username == "manager"
+    assert rows[0].summary.average_rating is None
+    assert rows[0].summary.rated_count == 0
 
 
 def test_manager_dashboard_grouping_and_latest_client_activity() -> None:

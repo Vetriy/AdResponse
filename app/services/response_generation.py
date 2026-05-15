@@ -48,12 +48,34 @@ MISSING_INFO_QUESTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
         ("Какой способ связи вам удобен?", ("телефон", "почт", "telegram", "связ")),
         ("Кратко опишите задачу, чтобы менеджер сразу видел контекст.", ("задач", "контекст", "вопрос")),
     ),
+    "other": (
+        ("Какую услугу, продукт или направление нужно продвигать?", ("услуг", "продукт", "направлен", "клиник", "салон")),
+        ("Какая цель важнее сейчас: заявки, звонки, продажи или узнаваемость?", ("заяв", "звон", "продаж", "узнаваем")),
+    ),
 }
 
 
 COMPLEX_CATEGORIES = {"low number of leads", "dissatisfaction with campaign results", "contact manager request"}
 NEGATIVE_TONES = {"negative", "irritated", "disappointed"}
 PLAYFUL_OFFTOPIC_MARKERS = ("кот", "котик", "собак", "мем", "шутк", "как вам", "нравится")
+ADVERTISING_CONTEXT_MARKERS = (
+    "реклам",
+    "продвиж",
+    "заяв",
+    "лид",
+    "кампан",
+    "сайт",
+    "лендинг",
+    "клиник",
+    "стомат",
+    "салон",
+    "услуг",
+    "бюджет",
+    "отчет",
+    "результат",
+    "клик",
+    "конверс",
+)
 
 
 def build_clarifying_questions(text: str, category: str) -> list[str]:
@@ -69,7 +91,16 @@ def build_clarifying_questions(text: str, category: str) -> list[str]:
 
 def is_playful_or_unusual(text: str, category: str) -> bool:
     normalized = text.lower()
-    return category == "other" or any(marker in normalized for marker in PLAYFUL_OFFTOPIC_MARKERS)
+    return any(marker in normalized for marker in PLAYFUL_OFFTOPIC_MARKERS) or (
+        category == "other" and not is_advertising_related(text, category)
+    )
+
+
+def is_advertising_related(text: str, category: str) -> bool:
+    if category != "other":
+        return True
+    normalized = text.lower()
+    return any(marker in normalized for marker in ADVERTISING_CONTEXT_MARKERS)
 
 
 def generate_fallback_response(
@@ -81,6 +112,7 @@ def generate_fallback_response(
 ) -> GeneratedChatResponse:
     questions = build_clarifying_questions(text, category)
     unusual = is_playful_or_unusual(text, category)
+    advertising_related = is_advertising_related(text, category)
     if unusual and not questions:
         questions = [
             "Хотите обсудить продвижение, результаты отчета или материалы для рекламной кампании?",
@@ -90,10 +122,12 @@ def generate_fallback_response(
     parts: list[str] = []
 
     if unusual:
-        parts.append("Сообщение понял. Если вопрос не про рекламу, отвечу легко: звучит приятно и по-доброму.")
+        parts.append("Сообщение понял. Отвечу легко: звучит приятно и по-доброму.")
         parts.append("А по рабочей части могу помочь с продвижением, отчетами, материалами кампании или вопросом для менеджера.")
     elif category == "contact manager request":
         parts.append("Передать диалог менеджеру можно. Чтобы он быстрее включился в задачу, соберем короткий контекст прямо здесь.")
+    elif advertising_related and category == "other":
+        parts.append("Похоже, вопрос связан с продвижением, но задачи пока мало для точного ответа.")
     elif emotional_tone == "anxious":
         parts.append("Ситуацию можно спокойно проверить по шагам: сначала уточним вводные, затем будет проще понять, где нужен разбор.")
     elif emotional_tone in NEGATIVE_TONES:

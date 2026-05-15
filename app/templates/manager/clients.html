@@ -41,7 +41,7 @@
                   <td>{{ row.active_appeals }}</td>
                   <td>{{ row.last_appeal_at.strftime("%d.%m.%Y %H:%M") if row.last_appeal_at else "нет обращений" }}</td>
                   <td>{{ row.last_report_at.strftime("%d.%m.%Y %H:%M") if row.last_report_at else "нет отчетов" }}</td>
-                  <td><a class="button button--secondary button--small" href="/manager/dashboard">К обращениям</a></td>
+                  <td><a class="button button--secondary button--small" href="/manager/dashboard?client_id={{ row.client.id }}">К обращениям</a></td>
                 </tr>
               {% endfor %}
             </tbody>

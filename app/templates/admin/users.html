@@ -25,7 +25,9 @@
               <td class="table-actions">
                 <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/edit">Править</a>
                 <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/reset-password">Пароль</a>
-                <form method="post" action="/admin/users/{{ user.id }}/toggle-active"><button class="button button--ghost button--small" type="submit">Вкл/выкл</button></form>
+                {% if user.role != "admin" %}
+                  <form method="post" action="/admin/users/{{ user.id }}/toggle-active"><button class="button button--ghost button--small" type="submit">Вкл/выкл</button></form>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

@@ -79,10 +79,34 @@
 
   <section class="card table-card">
     <div class="table-card__header">
-      <h2>Рабочие разделы</h2>
+      <h2>Рейтинг менеджеров</h2>
+      <span class="badge badge--mint">{{ manager_ratings|length }}</span>
     </div>
-    <div class="actions">
-      <a class="button button--secondary" href="/manager/dashboard">Обращения</a>
-    </div>
+    {% if manager_ratings %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Менеджер</th>
+              <th>Логин / email</th>
+              <th>Средняя оценка</th>
+              <th>Оцененных завершенных обращений</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in manager_ratings %}
+              <tr>
+                <td>{{ row.manager.full_name }}</td>
+                <td>{{ row.manager.username }}<br><span class="table-note">{{ row.manager.email }}</span></td>
+                <td>{{ row.summary.average_rating if row.summary.average_rating else "нет оценок" }}</td>
+                <td>{{ row.summary.rated_count }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="table-note">Менеджеры пока не созданы.</p>
+    {% endif %}
   </section>
 {% endblock %}

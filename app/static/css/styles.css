@@ -17,11 +17,18 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: linear-gradient(180deg, var(--bg), #fffdf9 55%, #f7fbff 100%);
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(217, 204, 255, 0.32), transparent 34rem),
-    linear-gradient(180deg, var(--bg), #fffdf9 56%, #f7fbff);
+    linear-gradient(180deg, rgba(255, 250, 243, 0.96), rgba(255, 253, 249, 0.96) 55%, rgba(247, 251, 255, 0.96) 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   line-height: 1.6;
@@ -444,7 +451,7 @@ p {
 .chat-messages {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   min-height: 420px;
   max-height: 56vh;
   overflow-y: auto;
@@ -456,7 +463,8 @@ p {
   white-space: pre-line;
   max-width: 78%;
   border-radius: 20px;
-  padding: 14px 16px;
+  line-height: 1.48;
+  padding: 11px 14px;
   box-shadow: 0 10px 22px rgba(91, 77, 61, 0.08);
 }
 
@@ -481,9 +489,11 @@ p {
 
 .chat-bubble small {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   color: var(--muted);
+  font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .chat-bubble--loading {
@@ -713,6 +723,20 @@ p {
   gap: 12px;
   align-items: end;
   margin: 18px 0;
+}
+
+.filter-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 18px;
+  background: #f4edff;
+  color: #5b5471;
+  font-weight: 750;
+  margin-top: 16px;
+  padding: 12px 14px;
 }
 
 .filter-bar label {
