@@ -10,6 +10,7 @@ def test_prompt_builder_contains_required_context() -> None:
     messages = build_llama_messages(
         PromptContext(
             client_message="Сколько стоит реклама?",
+            dialogue_context="Клиент спрашивает стоимость рекламы.",
             category="service cost",
             emotional_tone="interested",
             knowledge_items=[item],

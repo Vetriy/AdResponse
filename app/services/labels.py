@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from app.models import Appeal
+from app.models import Appeal, Conversation, Message
 from app.models.generated_response import GeneratedResponse
 
 
@@ -80,6 +80,43 @@ def category_label(value: str | None) -> str:
 
 def sender_label(value: str | None) -> str:
     return SENDER_LABELS.get(value or "", value or "Сообщение")
+
+
+def message_author_name(message: Message, conversation: Conversation | None = None, appeal: Appeal | None = None) -> str:
+    if message.sender_type == "system":
+        return ""
+    if message.sender_display_name:
+        return message.sender_display_name
+    if message.sender_type == "manager":
+        if appeal and appeal.assigned_manager and appeal.assigned_manager.full_name:
+            return appeal.assigned_manager.full_name
+        return "Менеджер агентства"
+
+    session = conversation.client_session if conversation else None
+    user = session.user if session else None
+    if user:
+        return user.full_name or user.username or user.email or f"Клиент №{user.id}"
+    if session:
+        return session.client_name or session.client_contact or f"Клиент №{session.id}"
+    return "Клиент"
+
+
+def message_role_label(message: Message) -> str:
+    if message.sender_type == "manager":
+        return "Менеджер"
+    return ""
+
+
+def message_date_label(value: datetime | None, today: date | None = None) -> str:
+    if value is None:
+        return ""
+    current_day = today or datetime.now(value.tzinfo).date()
+    message_day = value.date()
+    if message_day == current_day:
+        return "Сегодня"
+    if (current_day - message_day).days == 1:
+        return "Вчера"
+    return value.strftime("%d.%m.%Y")
 
 
 def role_label(value: str | None) -> str:

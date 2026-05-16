@@ -22,6 +22,7 @@ if (chatWidget) {
   const handoverEl = document.querySelector("[data-chat-handover]");
   let conversationId = chatWidget.dataset.conversationId ? Number(chatWidget.dataset.conversationId) : null;
   const reportId = chatWidget.dataset.reportId ? Number(chatWidget.dataset.reportId) : null;
+  let lastRenderedDate = "";
 
   const setError = (message) => {
     if (!errorEl) return;
@@ -44,6 +45,34 @@ if (chatWidget) {
 
   const scrollToBottom = () => {
     messagesEl.scrollTop = messagesEl.scrollHeight;
+  };
+
+  const dateLabel = (value) => {
+    const date = value ? new Date(value) : new Date();
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const sameDay = (left, right) => left.toDateString() === right.toDateString();
+    if (sameDay(date, today)) return "Сегодня";
+    if (sameDay(date, yesterday)) return "Вчера";
+    return date.toLocaleDateString("ru-RU");
+  };
+
+  const timeLabel = (value) => {
+    const date = value ? new Date(value) : new Date();
+    return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const appendDateSeparator = (createdAt) => {
+    const label = dateLabel(createdAt);
+    if (label === lastRenderedDate) return;
+    const separator = document.createElement("div");
+    separator.className = "chat-date-separator";
+    const text = document.createElement("span");
+    text.textContent = label;
+    separator.appendChild(text);
+    messagesEl.appendChild(separator);
+    lastRenderedDate = label;
   };
 
   const appendAttachments = (bubble, attachments = []) => {
@@ -163,11 +192,33 @@ if (chatWidget) {
 
   const appendMessage = (senderType, content, attachments = [], extraClass = "", message = null) => {
     clearEmptyState();
+    appendDateSeparator(message && message.created_at);
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble--${senderType} ${extraClass}`.trim();
-    bubble.textContent = content;
+    if (senderType !== "system") {
+      const meta = document.createElement("div");
+      meta.className = "chat-meta";
+      const name = document.createElement("strong");
+      name.textContent = (message && message.sender_display_name) || (senderType === "manager" ? "Менеджер агентства" : (chatWidget.dataset.clientName || "Клиент"));
+      meta.appendChild(name);
+      if (senderType === "manager") {
+        const role = document.createElement("span");
+        role.textContent = "Менеджер";
+        meta.appendChild(role);
+      }
+      bubble.appendChild(meta);
+    }
+    const body = document.createElement("div");
+    body.className = "chat-content";
+    body.textContent = content;
+    bubble.appendChild(body);
     appendAttachments(bubble, attachments);
     appendFeedbackControls(bubble, message || { sender_type: senderType });
+    const time = document.createElement("time");
+    time.className = "chat-time";
+    if (message && message.created_at) time.dateTime = message.created_at;
+    time.textContent = timeLabel(message && message.created_at);
+    bubble.appendChild(time);
     messagesEl.appendChild(bubble);
     scrollToBottom();
     return bubble;
@@ -210,6 +261,7 @@ if (chatWidget) {
     try {
       const history = await requestJson(`/chat/api/conversations/${conversationId}`);
       messagesEl.innerHTML = "";
+      lastRenderedDate = "";
       if (history.messages.length === 0) {
         messagesEl.innerHTML = '<div class="chat-empty"><strong>Добрый день!</strong><span>Напишите, что нужно рекламировать или какая проблема возникла в кампании.</span></div>';
       } else {

@@ -435,7 +435,12 @@ async def send_manager_message(request: Request, appeal_id: int) -> RedirectResp
             files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
             for file in files:
                 validate_upload_filename(file.filename)
-            message = Message(conversation_id=appeal.conversation.id, sender_type="manager", content=content)
+            message = Message(
+                conversation_id=appeal.conversation.id,
+                sender_type="manager",
+                sender_display_name=current_user.full_name or current_user.username,
+                content=content,
+            )
             db.add(message)
             db.flush()
             for file in files:
@@ -498,6 +503,7 @@ async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResp
         message = Message(
             conversation_id=report_conversation.id,
             sender_type="manager",
+            sender_display_name=current_user.full_name or current_user.username,
             content=f"Загружен рекламный отчет: {title}" + (f"\n{description}" if description else ""),
         )
         db.add(message)
@@ -586,7 +592,12 @@ async def send_manager_report_message(request: Request, client_id: int) -> Redir
         files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
         for file in files:
             validate_upload_filename(file.filename)
-        message = Message(conversation_id=conversation.id, sender_type="manager", content=content)
+        message = Message(
+            conversation_id=conversation.id,
+            sender_type="manager",
+            sender_display_name=current_user.full_name or current_user.username,
+            content=content,
+        )
         db.add(message)
         db.flush()
         for file in files:
@@ -634,6 +645,7 @@ async def upload_client_report(request: Request, client_id: int) -> RedirectResp
             Message(
                 conversation_id=conversation.id,
                 sender_type="manager",
+                sender_display_name=current_user.full_name or current_user.username,
                 content=f"Загружен рекламный отчет: {title}" + (f"\n{description}" if description else ""),
             )
         )

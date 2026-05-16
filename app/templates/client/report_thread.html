@@ -21,10 +21,21 @@
         <div class="info-banner">Автоответы в чате отчетов выключены. Менеджер ответит вручную.</div>
       {% endif %}
       <div class="chat-messages chat-messages--manager">
+        {% set day = namespace(value="") %}
         {% for message in conversation.messages %}
+          {% set current_day = message_date_label(message.created_at) %}
+          {% if current_day != day.value %}
+            <div class="chat-date-separator"><span>{{ current_day }}</span></div>
+            {% set day.value = current_day %}
+          {% endif %}
           <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
-            <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
-            {{ message.content }}
+            {% if message.sender_type != "system" %}
+              <div class="chat-meta">
+                <strong>{{ message_author_name(message, conversation) }}</strong>
+                {% if message_role_label(message) %}<span>{{ message_role_label(message) }}</span>{% endif %}
+              </div>
+            {% endif %}
+            <div class="chat-content">{{ message.content }}</div>
             {% if message.attachments %}
               <div class="attachment-list">
                 {% for attachment in message.attachments %}
@@ -36,6 +47,7 @@
                 {% endfor %}
               </div>
             {% endif %}
+            <time class="chat-time" datetime="{{ message.created_at.isoformat() }}">{{ message.created_at.strftime("%H:%M") }}</time>
           </div>
         {% else %}
           <div class="chat-empty"><strong>Сообщений пока нет</strong><span>Когда менеджер загрузит отчет или напишет комментарий, он появится здесь.</span></div>

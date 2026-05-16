@@ -251,7 +251,12 @@ async def send_client_report_message(request: Request) -> RedirectResponse:
         files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
         for file in files:
             validate_upload_filename(file.filename)
-        message = Message(conversation_id=conversation.id, sender_type="client", content=content)
+        message = Message(
+            conversation_id=conversation.id,
+            sender_type="client",
+            sender_display_name=user.full_name or user.username,
+            content=content,
+        )
         db.add(message)
         db.flush()
         for file in files:

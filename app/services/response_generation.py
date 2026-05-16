@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from app.core.config import settings
 from app.llama.client import LlamaClientError, LlamaCppClient
-from app.models import KnowledgeBaseItem
+from app.models import KnowledgeBaseItem, Message
 from app.services.prompt_builder import PromptContext, build_llama_messages
 
 
@@ -15,11 +15,58 @@ class GeneratedChatResponse:
     source: str = "local_rules"
 
 
+@dataclass(frozen=True)
+class DialogueContext:
+    latest_client_message: str
+    previous_client_messages: tuple[str, ...] = ()
+    previous_system_messages: tuple[str, ...] = ()
+    previous_manager_messages: tuple[str, ...] = ()
+    report_context: str | None = None
+
+    @property
+    def all_text(self) -> str:
+        parts = [
+            *self.previous_client_messages,
+            *self.previous_system_messages,
+            *self.previous_manager_messages,
+            self.latest_client_message,
+        ]
+        if self.report_context:
+            parts.append(self.report_context)
+        return "\n".join(part for part in parts if part)
+
+
+def build_dialogue_context(
+    latest_client_message: str,
+    messages: list[Message] | tuple[Message, ...] | None = None,
+    report_context: str | None = None,
+) -> DialogueContext:
+    previous_client_messages: list[str] = []
+    previous_system_messages: list[str] = []
+    previous_manager_messages: list[str] = []
+
+    for message in messages or ():
+        if message.sender_type == "client":
+            previous_client_messages.append(message.content)
+        elif message.sender_type == "system":
+            previous_system_messages.append(message.content)
+        elif message.sender_type == "manager":
+            previous_manager_messages.append(message.content)
+
+    return DialogueContext(
+        latest_client_message=latest_client_message,
+        previous_client_messages=tuple(previous_client_messages[-6:]),
+        previous_system_messages=tuple(previous_system_messages[-4:]),
+        previous_manager_messages=tuple(previous_manager_messages[-4:]),
+        report_context=report_context,
+    )
+
+
 MISSING_INFO_QUESTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "service cost": (
-        ("Какую услугу или рекламный канал вы рассматриваете?", ("услуг", "канал", "контекст", "таргет")),
-        ("В каком регионе планируется продвижение?", ("регион", "город", "область")),
-        ("Какой ориентировочный бюджет комфортно рассматривать?", ("бюджет", "руб", "тысяч")),
+        ("Какую услугу или рекламный канал вы рассматриваете?", ("услуг", "канал", "контекст", "таргет", "продвиг", "салон", "клиник")),
+        ("В каком регионе планируется продвижение?", ("регион", "город", "область", "москв", "спб", "санкт")),
+        ("Какой ориентировочный бюджетный диапазон комфортно рассматривать?", ("бюджет", "руб", "тысяч", "млн", "миллион")),
     ),
     "campaign launch": (
         ("Какой продукт или услугу нужно продвигать?", ("продукт", "услуг", "товар", "ниша")),
@@ -78,8 +125,8 @@ ADVERTISING_CONTEXT_MARKERS = (
 )
 
 
-def build_clarifying_questions(text: str, category: str) -> list[str]:
-    normalized = text.lower()
+def build_clarifying_questions(text: str, category: str, dialogue_context: str | None = None) -> list[str]:
+    normalized = f"{text}\n{dialogue_context or ''}".lower()
     checks = MISSING_INFO_QUESTIONS.get(category, ())
     questions = [
         question
@@ -87,6 +134,49 @@ def build_clarifying_questions(text: str, category: str) -> list[str]:
         if not any(keyword in normalized for keyword in keywords)
     ]
     return questions[:3]
+
+
+def knowledge_summary_for_client(category: str, emotional_tone: str, knowledge_items: list[KnowledgeBaseItem]) -> str:
+    if not knowledge_items:
+        return (
+            "Точные цены, сроки и прогнозы корректно считать только после уточнения вводных, поэтому сначала соберем недостающие детали."
+        )
+
+    if category == "service cost":
+        return "Обычно стоимость зависит от ниши, региона, выбранных каналов, объема работ и стартовых материалов."
+    if category == "campaign launch":
+        return "Для запуска важно собрать вводные по продукту, аудитории, географии, посадочной странице и желаемой дате старта."
+    if category in {"low number of leads", "dissatisfaction with campaign results"}:
+        return "Для предметного разбора стоит проверить период, каналы, бюджет, посадочную страницу и путь клиента до заявки."
+    if category == "limited budget":
+        return "При ограниченном бюджете лучше сфокусироваться на одной главной цели и одном приоритетном канале."
+    if category == "contact manager request":
+        return "Передам запрос так, чтобы менеджер видел задачу и текущую историю диалога."
+    if emotional_tone in NEGATIVE_TONES:
+        return "Сначала зафиксируем факты и контекст, чтобы менеджер мог быстро перейти к решению."
+    return "Опираюсь на внутреннюю базу агентства и перевожу ее в короткий клиентский ответ без служебных формулировок."
+
+
+def opening_for(category: str, emotional_tone: str, unusual: bool, has_previous_system: bool) -> str:
+    if unusual:
+        return "Сообщение понял. Отвечу легко: звучит приятно и по-доброму."
+    if has_previous_system:
+        return "Спасибо, продолжаю по текущему диалогу."
+    if category == "service cost":
+        return "По стоимости сориентируем аккуратно: цена зависит от нескольких вводных, поэтому точную сумму без них не придумываю."
+    if category == "campaign launch":
+        return "Запуск можно подготовить по шагам: сначала уточним продукт, аудиторию и готовность материалов."
+    if category == "limited budget":
+        return "При ограниченном бюджете лучше сразу выбрать главный приоритет, чтобы не распылять запуск."
+    if category == "contact manager request":
+        return "Передать диалог менеджеру можно."
+    if emotional_tone == "anxious":
+        return "Ситуацию можно спокойно проверить по шагам: сначала уточним вводные, затем будет проще понять, где нужен разбор."
+    if emotional_tone in NEGATIVE_TONES:
+        return "Понимаю, что ситуация вызывает недовольство и беспокойство по результатам. Давайте отделим эмоции от фактов, спокойно соберем данные и передадим контекст без потери деталей."
+    if emotional_tone == "interested":
+        return "Хороший запрос, давайте сразу сузим задачу, чтобы ответ был полезным и без лишних предположений."
+    return "Разберем ваш вопрос по делу: для точного ответа важно понять несколько параметров кампании или задачи."
 
 
 def is_playful_or_unusual(text: str, category: str) -> bool:
@@ -109,8 +199,11 @@ def generate_fallback_response(
     emotional_tone: str,
     knowledge_items: list[KnowledgeBaseItem],
     report_context: str | None = None,
+    dialogue_context: DialogueContext | None = None,
 ) -> GeneratedChatResponse:
-    questions = build_clarifying_questions(text, category)
+    context = dialogue_context or DialogueContext(latest_client_message=text, report_context=report_context)
+    context_text = context.all_text
+    questions = build_clarifying_questions(text, category, context_text)
     unusual = is_playful_or_unusual(text, category)
     advertising_related = is_advertising_related(text, category)
     if unusual and not questions:
@@ -122,34 +215,32 @@ def generate_fallback_response(
     parts: list[str] = []
 
     if unusual:
-        parts.append("Сообщение понял. Отвечу легко: звучит приятно и по-доброму.")
+        parts.append(opening_for(category, emotional_tone, unusual, bool(context.previous_system_messages)))
         parts.append("А по рабочей части могу помочь с продвижением, отчетами, материалами кампании или вопросом для менеджера.")
     elif category == "contact manager request":
-        parts.append("Передать диалог менеджеру можно. Чтобы он быстрее включился в задачу, соберем короткий контекст прямо здесь.")
+        parts.append(opening_for(category, emotional_tone, unusual, bool(context.previous_system_messages)))
+        parts.append("Чтобы специалист быстрее включился, достаточно оставить удобный способ связи и коротко обозначить задачу, если этого еще нет в переписке.")
     elif advertising_related and category == "other":
+        parts.append(opening_for(category, emotional_tone, unusual, bool(context.previous_system_messages)))
         parts.append("Похоже, вопрос связан с продвижением, но задачи пока мало для точного ответа.")
-    elif emotional_tone == "anxious":
-        parts.append("Ситуацию можно спокойно проверить по шагам: сначала уточним вводные, затем будет проще понять, где нужен разбор.")
-    elif emotional_tone in NEGATIVE_TONES:
-        parts.append("Вижу, что результат вызывает недовольство. Давайте отделим эмоции от фактов и быстро соберем данные для предметной проверки.")
-    elif emotional_tone == "interested":
-        parts.append("Хороший запрос, давайте сразу сузим задачу, чтобы ответ был полезным и без лишних предположений.")
     else:
-        parts.append("Разберем ваш вопрос по делу: для точного ответа важно понять несколько параметров кампании или задачи.")
+        parts.append(opening_for(category, emotional_tone, unusual, bool(context.previous_system_messages)))
 
-    if report_context:
-        parts.append(f"Вижу, что вопрос связан с отчетом: {report_context}.")
+    active_report_context = context.report_context or report_context
+    if active_report_context:
+        parts.append(f"Учитываю контекст отчета: {active_report_context}. Я вижу только название и описание отчета, без автоматического разбора содержимого файла.")
 
-    if knowledge_items and not unusual:
-        if emotional_tone in NEGATIVE_TONES:
-            parts.append("По таким ситуациям обычно сначала проверяют:")
-        else:
-            parts.append("Сейчас можно ориентироваться на следующее:")
-        parts.extend(f"- {item.content}" for item in knowledge_items[:2])
-    elif not unusual:
-        parts.append(
-            "Без исходных данных нельзя корректно назвать цену, срок или гарантировать рекламный результат, но можно быстро собрать недостающие вводные."
-        )
+    if not unusual:
+        parts.append(knowledge_summary_for_client(category, emotional_tone, knowledge_items))
+
+    if category == "service cost":
+        parts.append("Чтобы сориентировать по запуску, важно понять нишу, регион, цель, подходящие каналы и комфортный бюджетный диапазон.")
+    elif category == "campaign launch":
+        parts.append("После этих вводных можно предложить безопасный первый шаг без обещаний точных результатов заранее.")
+    elif category in {"low number of leads", "dissatisfaction with campaign results"}:
+        parts.append("Никого не обвиняю: в таких ситуациях часто влияет связка из настроек, бюджета, посадочной страницы и обработки заявок.")
+    elif category == "limited budget":
+        parts.append("Можно начать с тестового формата, но лучше заранее обозначить верхнюю границу бюджета и главный ожидаемый результат.")
 
     if questions:
         parts.append("Уточните, пожалуйста:")
@@ -177,8 +268,17 @@ def generate_chat_response(
     knowledge_items: list[KnowledgeBaseItem],
     llama_client: LlamaCppClient | None = None,
     report_context: str | None = None,
+    dialogue_context: DialogueContext | None = None,
 ) -> GeneratedChatResponse:
-    fallback = generate_fallback_response(text, category, emotional_tone, knowledge_items, report_context=report_context)
+    context = dialogue_context or DialogueContext(latest_client_message=text, report_context=report_context)
+    fallback = generate_fallback_response(
+        text,
+        category,
+        emotional_tone,
+        knowledge_items,
+        report_context=report_context,
+        dialogue_context=context,
+    )
 
     if not settings.use_llama:
         return fallback
@@ -192,6 +292,7 @@ def generate_chat_response(
         messages = build_llama_messages(
             PromptContext(
                 client_message=f"{text}\n\nКонтекст отчета: {report_context}" if report_context else text,
+                dialogue_context=context.all_text,
                 category=category,
                 emotional_tone=emotional_tone,
                 knowledge_items=knowledge_items,

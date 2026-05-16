@@ -8,7 +8,7 @@
   </section>
 
   <section class="chat-layout">
-    <div class="chat-window card" data-chat-widget data-storage="off" data-report-id="{{ report.id if report else '' }}">
+    <div class="chat-window card" data-chat-widget data-storage="off" data-report-id="{{ report.id if report else '' }}" data-client-name="{{ current_user.full_name or current_user.username if current_user else 'Клиент' }}">
       <div class="chat-header">
         <div>
           <strong>Онлайн-помощник агентства</strong>

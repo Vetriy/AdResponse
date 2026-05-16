@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from app.services.classification import classify_request
-from app.services.response_generation import build_clarifying_questions, generate_fallback_response
+from app.services.response_generation import DialogueContext, build_clarifying_questions, generate_fallback_response
 from app.services.sentiment import analyze_sentiment
 
 
@@ -53,7 +53,8 @@ def test_fallback_response_uses_manager_comments_and_safe_rules() -> None:
 
     assert result.source == "local_rules"
     assert result.handover_offered is False
-    assert "Уточните нишу" in result.text
+    assert "Уточните нишу" not in result.text
+    assert "стоимость зависит" in result.text
     assert "Уточните, пожалуйста" in result.text
     assert "подготовленных комментариев менеджера" not in result.text.lower()
 
@@ -69,6 +70,44 @@ def test_fallback_response_offers_handover_for_negative_request() -> None:
     assert result.handover_offered is True
     assert "недовольство" in result.text
     assert "передадим диалог менеджеру" in result.text
+
+
+def test_dialogue_context_avoids_repeating_answered_questions() -> None:
+    context = DialogueContext(
+        latest_client_message="Бюджет можем рассматривать до 80 тысяч.",
+        previous_client_messages=("Нужна реклама салона красоты в Москве.",),
+        previous_system_messages=("Уточните город и бюджет.",),
+    )
+
+    result = generate_fallback_response(
+        text=context.latest_client_message,
+        category="service cost",
+        emotional_tone="interested",
+        knowledge_items=[],
+        dialogue_context=context,
+    )
+    lowered_questions = " ".join(result.clarifying_questions).lower()
+
+    assert "регион" not in lowered_questions
+    assert "бюджет" not in lowered_questions
+    assert "услугу" not in lowered_questions
+
+
+def test_prepared_comments_are_internal_source_material_only() -> None:
+    item = SimpleNamespace(content="Сначала подтвердите проблему, затем попросите период и канал.")
+
+    result = generate_fallback_response(
+        text="Мы недовольны результатами, заявок почти нет.",
+        category="dissatisfaction with campaign results",
+        emotional_tone="disappointed",
+        knowledge_items=[item],
+    )
+    lowered = result.text.lower()
+
+    assert "сначала подтвердите" not in lowered
+    assert "попросите период" not in lowered
+    assert "период" in lowered
+    assert "менеджеру" in lowered
 
 
 def test_fallback_response_varies_by_emotional_tone() -> None:
@@ -127,6 +166,22 @@ def test_new_chat_without_report_context_does_not_mention_report() -> None:
     assert "вопрос связан с отчетом" not in result.text.lower()
 
 
+def test_report_thread_response_uses_report_title_without_claiming_file_parsing() -> None:
+    result = generate_fallback_response(
+        "Почему в отчете мало заявок?",
+        "low number of leads",
+        "neutral",
+        [],
+        report_context="Отчет за май: лидов стало меньше",
+    )
+    lowered = result.text.lower()
+
+    assert "отчет за май" in lowered
+    assert "название и описание" in lowered
+    assert "разбора содержимого файла" in lowered
+    assert "прочитал файл" not in lowered
+
+
 def test_client_response_does_not_expose_internal_phrases() -> None:
     result = generate_fallback_response(
         "Сколько стоит реклама для салона?",
@@ -136,5 +191,14 @@ def test_client_response_does_not_expose_internal_phrases() -> None:
     )
     lowered = result.text.lower()
 
-    for forbidden in ("fallback", "llama.cpp", "local_rules", "prompt", "подготовленные комментарии менеджера"):
+    for forbidden in (
+        "fallback",
+        "llama.cpp",
+        "local_rules",
+        "prompt",
+        "подготовленные комментарии менеджера",
+        "на основе подготовленных комментариев",
+        "менеджер может",
+        "сначала подтвердите",
+    ):
         assert forbidden not in lowered

@@ -25,6 +25,7 @@ class AttachmentRead(BaseModel):
 class ChatMessageRead(BaseModel):
     id: int
     sender_type: str
+    sender_display_name: str | None = None
     content: str
     created_at: datetime
     attachments: list[AttachmentRead] = Field(default_factory=list)

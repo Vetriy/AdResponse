@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -13,8 +15,24 @@ from app.models import (
 )
 from app.services.classification import classify_request
 from app.services.knowledge_base import resolve_active_category, select_knowledge_items
-from app.services.response_generation import generate_chat_response
+from app.services.response_generation import build_dialogue_context, generate_chat_response
 from app.services.sentiment import analyze_sentiment
+
+
+def report_context_for_linked_appeal(appeal: Appeal | None) -> str | None:
+    if appeal is None or not appeal.advertising_reports:
+        return None
+    parts = []
+    for report in sorted(appeal.advertising_reports, key=lambda item: (item.created_at or datetime.min, item.id or 0), reverse=True)[:3]:
+        parts.append(f"{report.title}: {report.description}" if report.description else report.title)
+    return "; ".join(parts) if parts else None
+
+
+def analysis_text_for_dialogue(content: str, conversation: Conversation) -> str:
+    context = build_dialogue_context(content, conversation.messages)
+    if not context.previous_client_messages and not context.previous_system_messages and not context.previous_manager_messages:
+        return content
+    return f"Последнее сообщение клиента: {content}\nПредыдущий контекст:\n{context.all_text}"
 
 
 def create_conversation(db: Session, user: User | None = None) -> Conversation:
@@ -47,8 +65,10 @@ def generate_auto_reply_for_conversation(
         conversation.status = "needs_manager"
         return None
 
-    classification = classify_request(content)
-    sentiment = analyze_sentiment(content)
+    dialogue_context = build_dialogue_context(content, conversation.messages, report_context=report_context)
+    analysis_text = analysis_text_for_dialogue(content, conversation)
+    classification = classify_request(analysis_text)
+    sentiment = analyze_sentiment(analysis_text)
     category, effective_category = resolve_active_category(db, classification.category)
     knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
     generated = generate_chat_response(
@@ -57,6 +77,7 @@ def generate_auto_reply_for_conversation(
         sentiment.emotional_tone,
         knowledge_items,
         report_context=report_context,
+        dialogue_context=dialogue_context,
     )
     system_message = Message(
         conversation_id=conversation.id,
@@ -75,7 +96,7 @@ def get_conversation(db: Session, conversation_id: int) -> Conversation | None:
         .options(
             selectinload(Conversation.messages),
             selectinload(Conversation.messages).selectinload(Message.attachments),
-            selectinload(Conversation.appeal),
+            selectinload(Conversation.appeal).selectinload(Appeal.advertising_reports),
         )
     )
 
@@ -93,17 +114,29 @@ def process_client_message(
     elif user and conversation.client_session.user_id != user.id:
         raise PermissionError("Conversation does not belong to current client.")
 
-    classification = classify_request(content)
-    sentiment = analyze_sentiment(content)
-    category, effective_category = resolve_active_category(db, classification.category)
-
     client_message = Message(
         conversation_id=conversation.id,
         sender_type="client",
+        sender_display_name=user.full_name or user.username if user else None,
         content=content,
     )
     db.add(client_message)
     db.flush()
+
+    appeal = conversation.appeal
+    if appeal is None:
+        appeal = Appeal(conversation_id=conversation.id, auto_reply_enabled=True)
+        db.add(appeal)
+
+    effective_report_context = report_context
+    if effective_report_context is None and conversation.conversation_type == "appeal":
+        effective_report_context = report_context_for_linked_appeal(appeal)
+
+    dialogue_context = build_dialogue_context(content, conversation.messages, report_context=effective_report_context)
+    analysis_text = analysis_text_for_dialogue(content, conversation)
+    classification = classify_request(analysis_text)
+    sentiment = analyze_sentiment(analysis_text)
+    category, effective_category = resolve_active_category(db, classification.category)
 
     db.add(
         SentimentAnalysis(
@@ -113,11 +146,6 @@ def process_client_message(
             explanation=sentiment.explanation,
         )
     )
-
-    appeal = conversation.appeal
-    if appeal is None:
-        appeal = Appeal(conversation_id=conversation.id, auto_reply_enabled=True)
-        db.add(appeal)
 
     appeal.category_id = category.id if category else None
     appeal.request_category = effective_category
@@ -137,7 +165,8 @@ def process_client_message(
         effective_category,
         sentiment.emotional_tone,
         knowledge_items,
-        report_context=report_context,
+        report_context=effective_report_context,
+        dialogue_context=dialogue_context,
     )
     appeal.status = "needs_manager" if generated.handover_offered else "needs_clarification" if generated.clarifying_questions else "auto_answered"
     appeal.priority = "high" if generated.handover_offered else "normal"

@@ -37,7 +37,7 @@ uvicorn app.main:app --reload
 11. Logout and login as `client`.
 12. Open `/chat/` and send a neutral cost request with an attachment.
 13. Show Russian category, clarifying questions and safe answer; note that emotional tone is hidden from the client UI.
-14. Return to `/client/dashboard`, open the appeal and continue the same dialogue.
+14. Return to `/client/dashboard`, open the appeal and continue the same dialogue; show that the next autoanswer uses earlier messages and does not repeat already answered questions.
 15. Click `Новое обращение` and show that a separate appeal is created.
 16. Send a negative or low-leads request after viewing a report scenario.
 17. Show tone-aware response that reduces negativity and offers manager handover.
@@ -53,10 +53,11 @@ uvicorn app.main:app --reload
 27. Send a manual manager response with an attachment.
 28. Finish the appeal.
 29. Login as client, show the single report chat in dashboard, ask a report-related question, show report-chat auto reply behavior and rate the completed appeal.
-30. Show unread badges before opening a chat and that they disappear after opening.
-31. Like/dislike an automatic answer and show the aggregate on admin dashboard.
-32. Send `Как вам котик?` and show the polite redirect to advertising context.
-33. Explain fallback mode and optional local `llama.cpp` mode.
+30. Show message layout: daily separators, bottom send time, client name, manager name with `Менеджер`, and no top signature on automatic responses.
+31. Show unread badges before opening a chat and that they disappear after opening.
+32. Like/dislike an automatic answer and show the aggregate on admin dashboard.
+33. Send `Как вам котик?` and show the polite redirect to advertising context.
+34. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize
 
@@ -66,6 +67,8 @@ uvicorn app.main:app --reload
 - The LLM path is optional and local.
 - Fallback works even without `llama.cpp`.
 - The model prompt includes safety rules and prepared manager comments.
+- Prepared comments are internal source material: client answers should not copy manager instructions or expose phrases about prepared comments.
+- Automatic responses use the full current dialogue context and still prioritize the latest client message.
 - Reports are stored locally; the assistant uses report title/description as context but does not parse file contents.
 
 ## Final functional checklist
@@ -87,6 +90,8 @@ uvicorn app.main:app --reload
 - [ ] Emotional tone is detected.
 - [ ] Statuses and categories are displayed in Russian; tones are visible in manager/admin views and hidden from client views.
 - [ ] Prepared comments are selected.
+- [ ] Prepared comments are not shown to clients as raw manager instructions.
+- [ ] Autoanswers use full dialogue context and do not repeat already answered clarifying questions.
 - [ ] Disabled categories and comments are not selected for new responses.
 - [ ] Disabling a category disables its prepared comments; re-enabling the category does not silently re-enable comments.
 - [ ] Fallback or llama.cpp response is generated.
@@ -107,6 +112,8 @@ uvicorn app.main:app --reload
 - [ ] Client can see advertising reports and ask a question about a report.
 - [ ] Active client sees one persistent report chat; potential client does not see reports.
 - [ ] Client-facing UI hides emotional tone and shows a static auto-reply-off banner instead of repeated system messages.
+- [ ] Message bubbles show one date separator per day and send time at the bottom of every message.
+- [ ] Client, manager and system message labels follow the messenger-style rules.
 - [ ] Unread indicators appear for manager/client messages and clear after opening.
 - [ ] Admin can manage categories.
 - [ ] Admin can manage prepared comments.

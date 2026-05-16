@@ -33,9 +33,22 @@ Expected:
 - category is shown as `Стоимость услуг`;
 - emotional tone is not shown in the client UI;
 - response asks clarifying questions and does not invent exact price.
+- response explains that price depends on niche, region, channels and scope.
 - response does not expose internal phrases about prepared manager comments, fallback, llama.cpp or system rules.
 - response wording is friendly and differs from anxious or negative responses.
 - each system answer has `Нравится` and `Не нравится` controls.
+
+Continue the same appeal with:
+
+```text
+Регион Москва, бюджет до 80 тысяч.
+```
+
+Expected:
+
+- the next response uses the previous dialogue context;
+- the assistant does not ask again for region or budget;
+- the answer does not copy prepared manager comments as raw text.
 
 ## 2. Campaign launch request
 
@@ -182,6 +195,7 @@ Expected:
 - client can download/open the report;
 - report question is saved in the same persistent report chat, not in a new report chat.
 - if report-chat auto replies are enabled, the assistant answers in the same report chat using report title/description context;
+- response says only that it uses report title/description and does not pretend to parse the file contents automatically;
 - if manager disables report-chat auto replies, the client message is saved without a system answer.
 
 ## 11. Admin adds prepared manager comment
@@ -352,3 +366,16 @@ Expected:
 
 - unread badge appears before opening;
 - after opening, the badge for that role disappears.
+
+## 21. Message layout
+
+Open client appeal detail, manager appeal detail and both report-thread pages.
+
+Expected:
+
+- date separator appears once per day: `Сегодня`, `Вчера` or `dd.mm.yyyy`;
+- send time appears at the bottom of every bubble;
+- client message metadata shows the client name only;
+- manager message metadata shows manager name and `Менеджер`;
+- automatic system response has no top name/signature;
+- attachments remain visible and readable inside the message bubble.

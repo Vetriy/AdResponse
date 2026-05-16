@@ -74,6 +74,7 @@ def serialize_message(message: Message, feedback_map: dict[int, object] | None =
     return ChatMessageRead(
         id=message.id,
         sender_type=message.sender_type,
+        sender_display_name=message.sender_display_name,
         content=message.content,
         created_at=message.created_at,
         attachments=[serialize_attachment(attachment) for attachment in message.attachments],

@@ -10,6 +10,7 @@ class Message(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id"), nullable=False)
     sender_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    sender_display_name: Mapped[str | None] = mapped_column(String(255))
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
