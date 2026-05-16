@@ -53,7 +53,8 @@ def test_manager_clients_template_limits_report_action_to_active_clients() -> No
     assert 'row.client.client_type == "active_client"' in text
     assert "data-autosubmit" in text
     assert "Сохранить</button>" not in text
-    assert "manager-client-card" in text
+    assert "data-table--clients" in text
+    assert "Действия" in text
     assert "manager-client-actions" in text
 
 
