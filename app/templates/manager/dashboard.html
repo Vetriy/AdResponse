@@ -105,7 +105,6 @@
                       <p>{{ client_identifier(appeal) }} · {{ appeal_category_label(appeal) }}</p>
                     </div>
                     <div class="appeal-row-card__meta">
-                      <span>Эмоциональный тон: {{ tone_label(display_tone) }}</span>
                       <span class="badge tone-{{ display_tone }}">{{ tone_label(display_tone) }}</span>
                       <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
                       <span>Активность: {{ latest_client_activity(appeal).strftime("%d.%m.%Y %H:%M") }}</span>

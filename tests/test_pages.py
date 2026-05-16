@@ -84,7 +84,9 @@ def test_manager_templates_show_tone_summary_only_outside_client_views() -> None
     manager_detail = Path("app/templates/manager/appeal_detail.html").read_text()
     client_detail = Path("app/templates/client/appeal_detail.html").read_text()
 
-    assert "Эмоциональный тон" in manager_dashboard
+    assert "Эмоциональный тон:" not in manager_dashboard
+    assert "tone-{{ display_tone }}" in manager_dashboard
+    assert "tone_label(display_tone)" in manager_dashboard
     assert "Эмоциональный тон" in manager_detail
     assert "Текущий тон клиента" not in manager_dashboard
     assert "Текущий тон клиента" not in manager_detail
