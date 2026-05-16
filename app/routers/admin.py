@@ -58,6 +58,36 @@ def can_archive_user(target: User | None, current_admin: User) -> bool:
     return target is not None and target.role in {"client", "manager"} and target.id != current_admin.id
 
 
+def toggle_category_active(category: Category | None) -> bool:
+    if category is None:
+        return False
+    disabling = category.is_active
+    category.is_active = not category.is_active
+    if disabling:
+        for item in category.knowledge_base_items:
+            item.is_active = False
+    return True
+
+
+def apply_user_filters(statement, role: str = "", status: str = "", client_type: str = "", search: str = ""):
+    if role in USER_ROLES:
+        statement = statement.where(User.role == role)
+    if status == "active":
+        statement = statement.where(User.is_active.is_(True))
+    elif status == "inactive":
+        statement = statement.where(User.is_active.is_(False))
+    if client_type in CLIENT_TYPES:
+        statement = statement.where(User.role == "client", User.client_type == client_type)
+    if search.strip():
+        pattern = f"%{search.strip().lower()}%"
+        statement = statement.where(
+            func.lower(User.username).like(pattern)
+            | func.lower(User.email).like(pattern)
+            | func.lower(User.full_name).like(pattern)
+        )
+    return statement
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request) -> HTMLResponse:
     if not request.session.get("user"):
@@ -314,7 +344,7 @@ async def delete_category(request: Request, category_id: int) -> RedirectRespons
             return admin
         category = db.get(Category, category_id)
         if category:
-            category.is_active = not category.is_active
+            toggle_category_active(category)
             db.commit()
     finally:
         db.close()
@@ -498,7 +528,13 @@ async def delete_knowledge_item(request: Request, item_id: int) -> RedirectRespo
 
 
 @router.get("/users", response_class=HTMLResponse)
-async def users_page(request: Request) -> HTMLResponse:
+async def users_page(
+    request: Request,
+    role: str = "",
+    status: str = "",
+    client_type: str = "",
+    search: str = "",
+) -> HTMLResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     db = open_db()
@@ -506,11 +542,19 @@ async def users_page(request: Request) -> HTMLResponse:
         admin = ensure_admin(request, db)
         if not hasattr(admin, "id"):
             return admin
-        users = list(db.scalars(select(User).order_by(User.role.asc(), User.username.asc())))
+        statement = apply_user_filters(select(User), role=role, status=status, client_type=client_type, search=search)
+        users = list(db.scalars(statement.order_by(User.role.asc(), User.username.asc())))
         return templates.TemplateResponse(
             request,
             "admin/users.html",
-            {"page_title": "Пользователи", "active_page": "users", "users": users, "roles": USER_ROLES},
+            {
+                "page_title": "Пользователи",
+                "active_page": "users",
+                "users": users,
+                "roles": USER_ROLES,
+                "client_types": CLIENT_TYPES,
+                "filters": {"role": role, "status": status, "client_type": client_type, "search": search},
+            },
         )
     finally:
         db.close()

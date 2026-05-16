@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -15,6 +15,7 @@ class Conversation(TimestampMixin, Base):
     summary: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50), default="open", nullable=False)
     conversation_type: Mapped[str] = mapped_column(String(50), default="appeal", nullable=False)
+    auto_reply_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     client_last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     manager_last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

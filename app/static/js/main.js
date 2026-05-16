@@ -19,7 +19,6 @@ if (chatWidget) {
   const statusEl = chatWidget.querySelector("[data-chat-status]");
   const errorEl = chatWidget.querySelector("[data-chat-error]");
   const categoryEl = document.querySelector("[data-chat-category]");
-  const toneEl = document.querySelector("[data-chat-tone]");
   const handoverEl = document.querySelector("[data-chat-handover]");
   let conversationId = chatWidget.dataset.conversationId ? Number(chatWidget.dataset.conversationId) : null;
   const reportId = chatWidget.dataset.reportId ? Number(chatWidget.dataset.reportId) : null;
@@ -184,9 +183,8 @@ if (chatWidget) {
     return bubble;
   };
 
-  const updateAnalysis = ({ category, category_label: categoryLabel, emotional_tone: emotionalTone, emotional_tone_label: toneLabel, handover_offered: handoverOffered, status }) => {
+  const updateAnalysis = ({ category, category_label: categoryLabel, handover_offered: handoverOffered, status }) => {
     if (categoryEl && (categoryLabel || category)) categoryEl.textContent = `категория: ${categoryLabel || category}`;
-    if (toneEl && (toneLabel || emotionalTone)) toneEl.textContent = `тон: ${toneLabel || emotionalTone}`;
     if (handoverEl) {
       const managerStatuses = ["needs_manager", "handover_requested", "assigned_to_manager", "manager_answered"];
       const handoverText = handoverOffered || managerStatuses.includes(status) ? "предложен" : "не требуется";
@@ -257,8 +255,6 @@ if (chatWidget) {
       appendMessage("client", result.client_message.content, result.client_message.attachments || [], "", result.client_message);
       if (result.system_message) {
         appendMessage("system", result.system_message.content, result.system_message.attachments || [], "", result.system_message);
-      } else {
-        appendMessage("system", "Сообщение сохранено. Автоответы по этому обращению выключены, менеджер ответит вручную.", [], "chat-bubble--notice");
       }
       updateAnalysis(result);
     } catch (error) {
@@ -325,5 +321,12 @@ document.querySelectorAll("[data-ai-feedback]").forEach((form) => {
     } catch (error) {
       if (status) status.textContent = error.message;
     }
+  });
+});
+
+document.querySelectorAll("[data-autosubmit]").forEach((select) => {
+  select.addEventListener("change", () => {
+    const form = select.closest("form");
+    if (form) form.submit();
   });
 });

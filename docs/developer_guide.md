@@ -128,12 +128,16 @@ Migration `20260516_0006_business_workflow_stage.py` adds:
 - `conversations.client_last_read_at` and `manager_last_read_at` for simple unread indicators;
 - `advertising_reports.conversation_id` so reports can be attached to the persistent report chat.
 
+Migration `20260516_0007_add_conversation_auto_reply.py` adds `conversations.auto_reply_enabled` for report-thread auto replies.
+
 Important workflow rules:
 
 - Only admins/managers change client type. Templates do not show the internal client type to the client.
 - Only active clients see `/client/reports` and the `Отчеты по рекламе` dashboard section.
 - `get_or_create_report_conversation()` guarantees one persistent report thread per active client.
+- Report-thread client messages use `generate_auto_reply_for_conversation()` with report title/description context when `conversation.auto_reply_enabled=true`.
 - Accepting an appeal sets `auto_reply_enabled=false`; manager/admin can toggle it per appeal.
+- Client-facing templates hide emotional tone; manager/admin templates can still show it.
 - `resolve_active_category()` falls back to active `other` when the classifier result points to a disabled category.
-- `select_knowledge_items()` ignores inactive comments and comments from inactive categories.
+- `select_knowledge_items()` ignores inactive comments and comments from inactive categories. Disabling a category cascades to disable its comments; re-enabling the category does not automatically re-enable comments.
 - User deletion in admin UI is safe archiving: clients/managers are deactivated, admins and the current user are protected.

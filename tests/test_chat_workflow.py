@@ -4,8 +4,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.security import hash_password
 from app.db.base import Base
-from app.models import Category, Message, User
-from app.services.chat_workflow import process_client_message
+from app.models import Category, ClientSession, Conversation, Message, User
+from app.services.chat_workflow import generate_auto_reply_for_conversation, process_client_message
 
 
 def test_client_message_without_conversation_creates_separate_appeals() -> None:
@@ -96,3 +96,36 @@ def test_disabled_auto_reply_saves_client_message_without_system_answer() -> Non
     assert questions == []
     assert handover is True
     assert [message.sender_type for message in messages].count("system") == 1
+
+
+def test_report_thread_auto_reply_can_be_enabled_or_disabled() -> None:
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        db.add(Category(slug="other", name="other", description="", is_active=True))
+        user = User(
+            username="client",
+            email="client@test.local",
+            full_name="Client",
+            role="client",
+            client_type="active_client",
+            hashed_password=hash_password("client123"),
+            is_active=True,
+        )
+        conversation = Conversation(
+            client_session=ClientSession(user=user),
+            title="Отчеты",
+            conversation_type="report_thread",
+            auto_reply_enabled=True,
+        )
+        db.add_all([user, conversation])
+        db.commit()
+
+        enabled_reply = generate_auto_reply_for_conversation(db, conversation, "Что значит мало заявок?", report_context="Отчет за май")
+        conversation.auto_reply_enabled = False
+        disabled_reply = generate_auto_reply_for_conversation(db, conversation, "Еще вопрос", report_context="Отчет за май")
+
+    assert enabled_reply is not None
+    assert enabled_reply.sender_type == "system"
+    assert disabled_reply is None
+    assert conversation.status == "needs_manager"

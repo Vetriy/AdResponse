@@ -725,6 +725,10 @@ p {
   margin: 18px 0;
 }
 
+.filter-bar--users {
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+}
+
 .filter-notice {
   display: flex;
   flex-wrap: wrap;
@@ -756,6 +760,14 @@ p {
   width: 100%;
   border-collapse: collapse;
   min-width: 620px;
+}
+
+.data-table--clients {
+  min-width: 980px;
+}
+
+.data-table .col-login {
+  min-width: 240px;
 }
 
 .data-table th,
@@ -795,6 +807,11 @@ p {
   align-items: center;
 }
 
+.table-actions--row {
+  min-width: 190px;
+  align-items: center;
+}
+
 .table-actions form,
 .inline-actions form {
   margin: 0;
@@ -819,6 +836,30 @@ p {
 
 .inline-form select {
   min-width: 170px;
+}
+
+.inline-form--autosave {
+  min-width: 190px;
+}
+
+.pastel-select {
+  border: 1px solid #d7c9ee;
+  border-radius: 14px;
+  background: #fbf8ff;
+  color: var(--text);
+  font-weight: 750;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.info-banner {
+  border: 1px solid #e6d8c3;
+  border-radius: 16px;
+  background: #fff8f0;
+  color: #6f5d4d;
+  font-weight: 750;
+  margin: 14px 16px 0;
+  padding: 10px 12px;
 }
 
 .empty-state {

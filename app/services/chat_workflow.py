@@ -37,6 +37,37 @@ def create_conversation(db: Session, user: User | None = None) -> Conversation:
     return conversation
 
 
+def generate_auto_reply_for_conversation(
+    db: Session,
+    conversation: Conversation,
+    content: str,
+    report_context: str | None = None,
+) -> Message | None:
+    if not conversation.auto_reply_enabled:
+        conversation.status = "needs_manager"
+        return None
+
+    classification = classify_request(content)
+    sentiment = analyze_sentiment(content)
+    category, effective_category = resolve_active_category(db, classification.category)
+    knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
+    generated = generate_chat_response(
+        content,
+        effective_category,
+        sentiment.emotional_tone,
+        knowledge_items,
+        report_context=report_context,
+    )
+    system_message = Message(
+        conversation_id=conversation.id,
+        sender_type="system",
+        content=generated.text,
+    )
+    db.add(system_message)
+    conversation.status = "needs_manager" if generated.handover_offered else "auto_answered"
+    return system_message
+
+
 def get_conversation(db: Session, conversation_id: int) -> Conversation | None:
     return db.scalar(
         select(Conversation)

@@ -31,7 +31,7 @@ Message:
 Expected:
 
 - category is shown as `Стоимость услуг`;
-- tone is shown as `Нейтральный` or `Заинтересованный`;
+- emotional tone is not shown in the client UI;
 - response asks clarifying questions and does not invent exact price.
 - response does not expose internal phrases about prepared manager comments, fallback, llama.cpp or system rules.
 - response wording is friendly and differs from anxious or negative responses.
@@ -61,7 +61,7 @@ Message:
 Expected:
 
 - category is shown as `Мало заявок` or `Недовольство результатами`;
-- tone is shown as `Недовольный`;
+- emotional tone is not shown in the client UI, but remains available in manager/admin views;
 - calm supportive response;
 - manager handover is offered.
 
@@ -181,6 +181,8 @@ Expected:
 - upload does not show `Клиент обращения не найден` for a registered client appeal;
 - client can download/open the report;
 - report question is saved in the same persistent report chat, not in a new report chat.
+- if report-chat auto replies are enabled, the assistant answers in the same report chat using report title/description context;
+- if manager disables report-chat auto replies, the client message is saved without a system answer.
 
 ## 11. Admin adds prepared manager comment
 
@@ -206,6 +208,8 @@ Expected:
 - prepared comment toggle says `Выключить` for active comments and `Включить` for inactive comments;
 - after toggling a prepared comment, the page returns to the comments section;
 - disabled categories and disabled comments are not used for new generated responses.
+- disabling a category also disables its prepared comments;
+- enabling the category again does not automatically re-enable its comments.
 
 ## 12. Manager finishes appeal and client rates manager
 
@@ -258,6 +262,8 @@ Expected:
 - the dashboard heading says `Обращения клиента: ...` and has `Все обращения`.
 - active clients have an `Отчеты` action that opens one persistent report chat;
 - potential clients do not have the report chat action.
+- active clients are listed before potential clients;
+- changing client type in the dropdown saves automatically without a separate `Сохранить` button.
 
 ## 15. Unusual question fallback
 
@@ -331,6 +337,7 @@ Expected:
 - client message is saved;
 - no new automatic system response appears;
 - appeal status moves to manager attention.
+- client sees one static banner about disabled auto replies, not a repeated system bubble after each message.
 
 ## 20. Unread indicators
 

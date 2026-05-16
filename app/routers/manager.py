@@ -11,6 +11,7 @@ from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, ClientSession, Conversation, Message, MessageAttachment, User
 from app.services.feedback import manager_rating_summary
 from app.services.manager_workflow import (
+    change_client_type,
     finish_appeal_for_manager,
     get_or_create_report_conversation,
     get_report_conversation,
@@ -270,7 +271,7 @@ async def manager_appeals_alias(request: Request, status: str = "", category: st
 
 
 @router.get("/clients", response_class=HTMLResponse)
-async def manager_clients(request: Request) -> HTMLResponse:
+async def manager_clients(request: Request, updated: str = "") -> HTMLResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     db = open_db()
@@ -286,6 +287,7 @@ async def manager_clients(request: Request) -> HTMLResponse:
                 "active_page": "manager-clients",
                 "clients": list_manager_clients(db),
                 "client_types": CLIENT_TYPES,
+                "updated": updated,
                 "db_error": None,
             },
         )
@@ -298,6 +300,7 @@ async def manager_clients(request: Request) -> HTMLResponse:
                 "active_page": "manager-clients",
                 "clients": [],
                 "client_types": CLIENT_TYPES,
+                "updated": "",
                 "db_error": database_error_message(error),
             },
         )
@@ -335,12 +338,11 @@ async def update_client_type(request: Request, client_id: int) -> RedirectRespon
         if not hasattr(current_user, "id"):
             return current_user
         client = db.get(User, client_id)
-        if client and client.role == "client":
-            client.client_type = client_type
+        if change_client_type(client, client_type):
             db.commit()
     finally:
         db.close()
-    return redirect_to("/manager/clients")
+    return redirect_to("/manager/clients?updated=client_type")
 
 
 @router.post("/appeals/{appeal_id}/auto-reply")
@@ -359,6 +361,25 @@ async def toggle_auto_reply(request: Request, appeal_id: int) -> RedirectRespons
     finally:
         db.close()
     return redirect_to(f"/manager/appeals/{appeal_id}")
+
+
+@router.post("/clients/{client_id}/reports/auto-reply")
+async def toggle_report_auto_reply(request: Request, client_id: int) -> RedirectResponse:
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        client = db.get(User, client_id)
+        if client and client.role == "client" and client.client_type == "active_client":
+            conversation = get_or_create_report_conversation(db, client)
+            conversation.auto_reply_enabled = not conversation.auto_reply_enabled
+            if not conversation.auto_reply_enabled:
+                conversation.status = "needs_manager"
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to(f"/manager/clients/{client_id}/reports")
 
 
 @router.post("/appeals/{appeal_id}/finish")

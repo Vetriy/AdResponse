@@ -34,6 +34,11 @@
                   <button type="submit">{{ "Выключить" if category.is_active else "Включить" }}</button>
                 </form>
               </div>
+              {% if category.is_active %}
+                <p class="table-note">При выключении категории ее комментарии тоже будут выключены.</p>
+              {% else %}
+                <p class="table-note">При включении категории комментарии останутся в текущем состоянии.</p>
+              {% endif %}
             </article>
           {% else %}
             <div class="empty-state empty-state--compact">

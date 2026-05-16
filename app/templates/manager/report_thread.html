@@ -48,6 +48,17 @@
     </div>
 
     <aside class="card side-panel">
+      <h2>Сводка</h2>
+      <div class="detail-list">
+        <span>Автоответы</span>
+        <strong>{{ "включены" if conversation.auto_reply_enabled else "выключены" }}</strong>
+        <span>Клиент</span>
+        <strong>{{ client.full_name }}</strong>
+      </div>
+      <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/auto-reply">
+        <button class="button button--secondary" type="submit">{{ "Выключить автоответы" if conversation.auto_reply_enabled else "Включить автоответы" }}</button>
+      </form>
+
       <h2>Новый отчет</h2>
       <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/upload" enctype="multipart/form-data">
         <label for="client-report-title">Название</label>

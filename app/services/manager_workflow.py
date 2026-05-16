@@ -67,6 +67,20 @@ def finish_appeal_for_manager(appeal: Appeal | None, manager: User) -> bool:
     return True
 
 
+def client_type_sort_key(client: User) -> tuple[int, str, str]:
+    type_rank = 0 if client.client_type == "active_client" else 1
+    return (type_rank, (client.full_name or "").lower(), client.username.lower())
+
+
+def change_client_type(client: User | None, client_type: str) -> bool:
+    if client is None or client.role != "client":
+        return False
+    if client_type not in {"active_client", "potential_client"}:
+        return False
+    client.client_type = client_type
+    return True
+
+
 def latest_client_activity(appeal: Appeal) -> datetime:
     client_messages = [message.created_at for message in appeal.conversation.messages if message.sender_type == "client" and message.created_at]
     if client_messages:
@@ -120,7 +134,10 @@ def group_manager_appeals(appeals: list[Appeal], current_manager_id: int | None)
 
 
 def list_manager_clients(db: Session) -> list[ManagerClientRow]:
-    clients = list(db.scalars(select(User).where(User.role == "client").order_by(User.full_name.asc(), User.username.asc())))
+    clients = sorted(
+        db.scalars(select(User).where(User.role == "client")).all(),
+        key=client_type_sort_key,
+    )
     rows: list[ManagerClientRow] = []
     for client in clients:
         appeal_base = (

@@ -15,6 +15,9 @@
         <div><strong>История диалога</strong><span>{{ status_label(appeal.status) }}</span></div>
         <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
       </div>
+      {% if not appeal.auto_reply_enabled %}
+        <div class="info-banner">Автоответы в этом обращении выключены. Менеджер ответит вручную.</div>
+      {% endif %}
       <div class="chat-messages chat-messages--manager" aria-live="polite" aria-label="История сообщений" data-chat-messages>
         {% for message in appeal.conversation.messages %}
           <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
@@ -75,7 +78,6 @@
       <h2>Сводка</h2>
       <div class="stack">
         <span class="badge badge--lavender" data-chat-category>категория: {{ appeal_category_label(appeal) }}</span>
-        <span class="badge badge--peach" data-chat-tone>тон: {{ tone_label(appeal.emotional_tone) }}</span>
         <span class="badge badge--mint" data-chat-handover>менеджер: {{ "предложен" if appeal.status in ["needs_manager", "handover_requested", "assigned_to_manager", "manager_answered"] else "по ситуации" }}</span>
       </div>
       <p>Это выбранное обращение. Новое обращение создается отдельно через страницу чата.</p>

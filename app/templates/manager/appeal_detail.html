@@ -113,18 +113,13 @@
         </form>
 
         {% if appeal.generated_responses %}
+          {% set latest_response = latest_generated_response(appeal.generated_responses) %}
           <div class="mini-section">
             <h3>Автоматические ответы системы</h3>
             <p>Автоответов системы: <strong>{{ appeal.generated_responses|length }}</strong></p>
-            <p>Последний источник: <span class="badge badge--lavender">{{ source_label(appeal.generated_responses[-1].source) }}</span></p>
-          </div>
-        {% endif %}
-
-        {% if rating_summary %}
-          <div class="mini-section">
-            <h3>Рейтинг менеджера</h3>
-            <p>Средняя оценка: <strong>{{ rating_summary.average_rating if rating_summary.average_rating else "—" }}</strong></p>
-            <p>Оцененных завершенных обращений: <strong>{{ rating_summary.rated_count }}</strong></p>
+            {% if latest_response %}
+              <p>Последний источник: <span class="badge badge--lavender">{{ source_label(latest_response.source) }}</span></p>
+            {% endif %}
           </div>
         {% endif %}
 

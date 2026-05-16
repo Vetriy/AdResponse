@@ -18,14 +18,17 @@
         <h2>Клиентская база</h2>
         <span class="badge badge--blue">{{ clients|length }}</span>
       </div>
+      {% if updated %}
+        <p class="form-hint form-hint--neutral">Изменения сохранены.</p>
+      {% endif %}
       {% if clients %}
         <div class="table-wrap">
-          <table class="data-table">
+          <table class="data-table data-table--clients">
             <thead>
               <tr>
                 <th>Клиент</th>
                 <th>Тип</th>
-                <th>Логин / email</th>
+                <th class="col-login">Логин / Email</th>
                 <th>Всего обращений</th>
                 <th>Активные</th>
                 <th>Последнее обращение</th>
@@ -38,13 +41,12 @@
                 <tr>
                   <td>Клиент №{{ row.client.id }}<br><strong>{{ row.client.full_name }}</strong></td>
                   <td>
-                    <form class="inline-form" method="post" action="/manager/clients/{{ row.client.id }}/type">
-                      <select name="client_type" aria-label="Тип клиента">
+                    <form class="inline-form inline-form--autosave" method="post" action="/manager/clients/{{ row.client.id }}/type">
+                      <select class="pastel-select" name="client_type" aria-label="Тип клиента" data-autosubmit>
                         {% for client_type in client_types %}
                           <option value="{{ client_type }}" {% if row.client.client_type == client_type %}selected{% endif %}>{{ client_type_label(client_type) }}</option>
                         {% endfor %}
                       </select>
-                      <button class="button button--ghost button--small" type="submit">Сохранить</button>
                     </form>
                   </td>
                   <td>{{ row.client.username }}<br><span class="table-note">{{ row.client.email }}</span></td>
@@ -52,10 +54,12 @@
                   <td>{{ row.active_appeals }}</td>
                   <td>{{ row.last_appeal_at.strftime("%d.%m.%Y %H:%M") if row.last_appeal_at else "нет обращений" }}</td>
                   <td>{{ row.last_report_at.strftime("%d.%m.%Y %H:%M") if row.last_report_at else "нет отчетов" }}</td>
-                  <td class="table-actions">
+                  <td class="table-actions table-actions--row">
                     <a class="button button--secondary button--small" href="/manager/dashboard?client_id={{ row.client.id }}">К обращениям</a>
                     {% if row.client.client_type == "active_client" %}
                       <a class="button button--primary button--small" href="/manager/clients/{{ row.client.id }}/reports">Отчеты{% if row.unread_report_messages %} · {{ row.unread_report_messages }}{% endif %}</a>
+                    {% else %}
+                      <span class="table-note">Отчеты недоступны</span>
                     {% endif %}
                   </td>
                 </tr>

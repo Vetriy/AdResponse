@@ -2,12 +2,14 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db.base import Base
-from app.models import Appeal, AppealFeedback, Category, ClientSession, Conversation, KnowledgeBaseItem, Message, User
+from app.models import AdvertisingReport, Appeal, AppealFeedback, Category, ClientSession, Conversation, GeneratedResponse, KnowledgeBaseItem, Message, User
 from app.services.analytics import build_admin_analytics, grouped_appeal_status, percent
 from app.services.feedback import manager_rating_rows, manager_rating_summary, normalize_ai_feedback, store_or_update_ai_feedback
-from app.services.labels import client_type_label
+from app.services.labels import client_type_label, latest_generated_response, source_label
 from app.services.manager_workflow import (
     assignment_group,
+    change_client_type,
+    client_type_sort_key,
     finish_appeal_for_manager,
     get_or_create_report_conversation,
     group_manager_appeals,
@@ -15,7 +17,7 @@ from app.services.manager_workflow import (
     resolve_appeal_client,
     unread_messages_count,
 )
-from app.routers.admin import can_archive_user, form_bool, form_int, slugify
+from app.routers.admin import apply_user_filters, can_archive_user, form_bool, form_int, slugify, toggle_category_active
 from app.routers.manager import PLACEHOLDER_MANAGER_EMAIL, get_or_create_placeholder_manager
 
 
@@ -82,6 +84,17 @@ def test_report_thread_is_persistent_for_active_client_and_unread_counts_work() 
         assert unread_messages_count(first, "client") == 0
 
 
+def test_manager_client_helpers_sort_active_first_and_change_type() -> None:
+    active = User(username="z-active", email="a@test.local", full_name="Z", role="client", client_type="active_client", hashed_password="x")
+    potential = User(username="a-potential", email="p@test.local", full_name="A", role="client", client_type="potential_client", hashed_password="x")
+    manager = User(username="manager", email="m@test.local", full_name="M", role="manager", hashed_password="x")
+
+    assert sorted([potential, active], key=client_type_sort_key) == [active, potential]
+    assert change_client_type(potential, "active_client") is True
+    assert potential.client_type == "active_client"
+    assert change_client_type(manager, "active_client") is False
+
+
 def test_admin_can_archive_clients_and_managers_but_not_admins_or_self() -> None:
     admin = User(id=1, username="admin", email="a@test.local", full_name="Admin", role="admin", hashed_password="x")
     other_admin = User(id=2, username="admin2", email="a2@test.local", full_name="Admin 2", role="admin", hashed_password="x")
@@ -92,6 +105,15 @@ def test_admin_can_archive_clients_and_managers_but_not_admins_or_self() -> None
     assert can_archive_user(manager, admin) is True
     assert can_archive_user(other_admin, admin) is False
     assert can_archive_user(admin, admin) is False
+
+
+def test_latest_autoanswer_source_summary_uses_latest_response() -> None:
+    old = GeneratedResponse(id=1, source="local_rules", response_text="A")
+    latest = GeneratedResponse(id=2, source="local_llama_cpp", response_text="B")
+
+    assert latest_generated_response([latest, old]) is latest
+    assert source_label(latest.source) == "Локальная языковая модель"
+    assert source_label(old.source) == "Автоматический ответ"
 
 
 def test_finish_appeal_assigns_manager_and_closes() -> None:
@@ -230,3 +252,26 @@ def test_admin_analytics_groups_totals() -> None:
     assert analytics["appeals"]["groups"]["closed"] == 1
     assert analytics["comments"]["active"] == 1
     assert analytics["comments"]["inactive"] == 1
+
+
+def test_admin_user_filters_and_category_disable_cascades_comments() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        active_client = User(username="active", email="active@test.local", full_name="Active Client", role="client", client_type="active_client", hashed_password="x", is_active=True)
+        archived_manager = User(username="archived", email="arch@test.local", full_name="Archived Manager", role="manager", hashed_password="x", is_active=False)
+        category = Category(slug="service-cost", name="service cost", is_active=True)
+        db.add_all([active_client, archived_manager, category])
+        db.flush()
+        comment = KnowledgeBaseItem(category=category, title="Comment", content="Text", is_active=True)
+        db.add(comment)
+        db.commit()
+
+        filtered = list(db.scalars(apply_user_filters(select(User), role="client", status="active", client_type="active_client", search="active")))
+        toggle_category_active(category)
+        db.flush()
+
+        assert filtered == [active_client]
+        assert category.is_active is False
+        assert comment.is_active is False

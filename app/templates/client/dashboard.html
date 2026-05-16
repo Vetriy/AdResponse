@@ -37,13 +37,12 @@
       {% if appeals %}
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Обращение</th><th>Категория</th><th>Тон</th><th>Статус</th><th>Создано</th><th></th></tr></thead>
+            <thead><tr><th>Обращение</th><th>Категория</th><th>Статус</th><th>Создано</th><th></th></tr></thead>
             <tbody>
               {% for appeal in appeals %}
                 <tr>
                   <td>№{{ appeal.id }}{% if unread_messages_count(appeal.conversation, "client") %}<br><span class="badge badge--peach">Новое: {{ unread_messages_count(appeal.conversation, "client") }}</span>{% endif %}</td>
                   <td>{{ appeal_category_label(appeal) }}</td>
-                  <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span></td>
                   <td><span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span></td>
                   <td>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
                   <td><a class="button button--secondary button--small" href="/client/appeals/{{ appeal.id }}">Открыть</a></td>

@@ -10,6 +10,7 @@ from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, AppealFeedback, Conversation, Message, MessageAttachment
 from app.services.feedback import client_ai_feedback_map, client_feedback_for_appeal
+from app.services.chat_workflow import generate_auto_reply_for_conversation
 from app.services.manager_workflow import get_or_create_report_conversation, get_report_conversation, mark_conversation_read, unread_messages_count
 from app.services.uploads import save_upload_file, validate_upload_filename
 
@@ -34,6 +35,16 @@ def client_appeal_statement(user_id: int):
         .options(selectinload(Appeal.category))
         .order_by(Appeal.created_at.desc())
     )
+
+
+def build_report_thread_context(reports: list[AdvertisingReport]) -> str | None:
+    parts = []
+    for report in reports[:5]:
+        if report.description:
+            parts.append(f"{report.title}: {report.description}")
+        else:
+            parts.append(report.title)
+    return "; ".join(parts) if parts else None
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -256,6 +267,21 @@ async def send_client_report_message(request: Request) -> RedirectResponse:
                     size_bytes=stored.size_bytes,
                 )
             )
+        reports = list(
+            db.scalars(
+                select(AdvertisingReport)
+                .where(AdvertisingReport.client_user_id == user.id)
+                .order_by(AdvertisingReport.created_at.desc())
+            )
+        )
+        system_message = generate_auto_reply_for_conversation(
+            db,
+            conversation,
+            content,
+            report_context=build_report_thread_context(reports),
+        )
+        if system_message:
+            db.flush()
         db.commit()
     except ValueError as upload_error:
         db.rollback()

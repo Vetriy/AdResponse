@@ -11,6 +11,39 @@
       <h2>Все пользователи</h2>
       <a class="button button--primary" href="/admin/users/create">Создать</a>
     </div>
+    <form class="filter-bar filter-bar--users" method="get" action="/admin/users">
+      <label>
+        <span>Роль</span>
+        <select name="role">
+          <option value="">Все роли</option>
+          {% for role in roles %}
+            <option value="{{ role }}" {% if filters.role == role %}selected{% endif %}>{{ role_label(role) }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Статус</span>
+        <select name="status">
+          <option value="">Все</option>
+          <option value="active" {% if filters.status == "active" %}selected{% endif %}>Активные</option>
+          <option value="inactive" {% if filters.status == "inactive" %}selected{% endif %}>Выключенные/архивные</option>
+        </select>
+      </label>
+      <label>
+        <span>Тип клиента</span>
+        <select name="client_type">
+          <option value="">Все типы</option>
+          {% for client_type in client_types %}
+            <option value="{{ client_type }}" {% if filters.client_type == client_type %}selected{% endif %}>{{ client_type_label(client_type) }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Поиск</span>
+        <input name="search" value="{{ filters.search }}" placeholder="Логин, email или имя">
+      </label>
+      <button class="button button--secondary" type="submit">Фильтровать</button>
+    </form>
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr><th>Логин</th><th>Email</th><th>Имя</th><th>Роль</th><th>Тип клиента</th><th>Статус</th><th></th></tr></thead>

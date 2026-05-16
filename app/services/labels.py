@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from app.models import Appeal
+from app.models.generated_response import GeneratedResponse
 
 
 STATUS_LABELS = {
@@ -89,6 +92,12 @@ def client_type_label(value: str | None) -> str:
 
 def source_label(value: str | None) -> str:
     return SOURCE_LABELS.get(value or "", value or "Автоматический ответ")
+
+
+def latest_generated_response(responses: list[GeneratedResponse]) -> GeneratedResponse | None:
+    if not responses:
+        return None
+    return max(responses, key=lambda response: (response.created_at or datetime.min, response.id or 0))
 
 
 def appeal_category_label(appeal: Appeal | None) -> str:
