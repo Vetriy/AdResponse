@@ -932,8 +932,10 @@ p {
 }
 
 .manager-client-actions {
+  display: flex;
   min-height: 78px;
-  align-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
 }
 
@@ -947,6 +949,94 @@ p {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
+}
+
+.manager-client-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.manager-client-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(150px, 0.72fr) minmax(300px, 1.45fr) minmax(190px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fffdf9;
+  padding: 14px;
+}
+
+.manager-client-card h3,
+.manager-client-card p {
+  margin-bottom: 0;
+}
+
+.manager-client-card__main,
+.manager-client-card__type,
+.manager-client-card__stats {
+  min-width: 0;
+}
+
+.manager-client-card__main p {
+  overflow-wrap: anywhere;
+}
+
+.manager-client-card__type label {
+  display: grid;
+  gap: 6px;
+}
+
+.manager-client-card__type span,
+.manager-client-card__stats span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.manager-client-card__stats {
+  display: grid;
+  grid-template-columns: 0.65fr 0.55fr 1fr 1fr;
+  gap: 8px;
+}
+
+.manager-client-card__stats div {
+  display: grid;
+  gap: 3px;
+  border-radius: 14px;
+  background: #fff8f0;
+  padding: 8px 10px;
+}
+
+.manager-client-card__stats strong {
+  font-size: 0.9rem;
+}
+
+.rating-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.rating-summary div {
+  border-radius: 18px;
+  background: #f4edff;
+  padding: 14px 16px;
+}
+
+.rating-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.rating-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.35rem;
 }
 
 .info-banner {
@@ -1391,6 +1481,9 @@ p {
     .analytics-grid,
     .kb-item-card,
     .report-card,
+    .manager-client-card,
+    .manager-client-card__stats,
+    .rating-summary,
     .appeal-row-card,
     .dislike-panel {
     grid-template-columns: 1fr;

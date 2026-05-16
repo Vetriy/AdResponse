@@ -50,14 +50,14 @@ uvicorn app.main:app --reload
 24. Accept the appeal and explain that it закрепляет диалог за менеджером.
 25. Show that accepting the appeal turns off autoanswers for that appeal, and demonstrate the toggle.
 26. Upload an advertising report for the active client.
-27. Open `/manager/clients`, show active clients first, aligned action buttons, auto-save client type dropdowns, and the persistent report chat only for active clients.
+27. Open `/manager/clients`, show active clients first, aligned client cards, auto-save client type dropdowns, and the persistent report chat only for active clients.
 28. Send a manual manager response with an attachment.
 29. Finish the appeal.
 30. Login as client, show the single report chat in dashboard, ask a report-related question, show report-chat auto reply behavior and rate the completed appeal.
 31. Show message layout: daily separators, bottom send time, client name, manager name with `Менеджер`, and no top signature on automatic responses.
 32. Show unread badges before opening a chat and that they disappear after opening.
 33. Like/dislike an automatic answer and show the aggregate on admin dashboard.
-34. Send `Как вам котик?` and show the polite redirect to advertising context.
+34. Send `Как вам котик?` and show the short connection to an advertising creative idea.
 35. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize

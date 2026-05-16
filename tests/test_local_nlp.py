@@ -135,6 +135,26 @@ def test_landing_page_explanation_is_natural_for_follow_up_question() -> None:
     assert "есть ли уже сайт, лендинг или материалы" not in lowered
 
 
+def test_missing_landing_page_follow_up_does_not_restart_brief() -> None:
+    result = generate_fallback_response(
+        text="Посадочной страницы пока нет",
+        category="campaign launch",
+        emotional_tone="neutral",
+        knowledge_items=[],
+        dialogue_context=DialogueContext(
+            latest_client_message="Посадочной страницы пока нет",
+            previous_client_messages=("Продвигаем новую услугу в Москве для владельцев малого бизнеса.",),
+        ),
+    )
+    lowered = result.text.lower()
+
+    assert "существующий сайт" in lowered
+    assert "страницу услуги" in lowered
+    assert "форму для заявки" in lowered
+    assert "какой продукт" not in lowered
+    assert "в каком регионе" not in lowered
+
+
 def test_prepared_comments_are_internal_source_material_only() -> None:
     item = SimpleNamespace(content="Сначала подтвердите проблему, затем попросите период и канал.")
 
@@ -175,11 +195,34 @@ def test_unusual_question_fallback_is_human_and_ad_context_safe() -> None:
     result = generate_fallback_response("Как вам котик?", "other", "neutral", [])
     lowered = result.text.lower()
 
-    assert "продвиж" in lowered
-    assert "менеджер" in lowered
-    assert len(result.clarifying_questions) == 2
+    assert "котик отличный" in lowered
+    assert "рекламного креатива" in lowered
+    assert "идею для рекламы" in lowered
+    assert result.clarifying_questions == []
+    for forbidden in ("легкий вопрос", "отвечу коротко", "по-доброму", "по рабочей части"):
+        assert forbidden not in lowered
     for forbidden in ("prepared", "fallback", "llama", "local_rules", "prompt", "подготовленные комментарии"):
         assert forbidden not in lowered
+
+
+def test_playful_cat_message_gently_connects_to_advertising_without_meta_phrases() -> None:
+    result = generate_fallback_response(
+        "Как вам котик?",
+        "other",
+        "neutral",
+        [],
+        dialogue_context=DialogueContext(
+            latest_client_message="Как вам котик?",
+            previous_client_messages=("Нужны идеи для продвижения салона.",),
+        ),
+    )
+    lowered = result.text.lower()
+
+    assert "рекламного креатива" in lowered
+    assert "идею для рекламы" in lowered
+    assert "легкий вопрос" not in lowered
+    assert "отвечу коротко" not in lowered
+    assert "по рабочей части" not in lowered
 
 
 def test_dental_clinic_advertising_request_is_not_treated_as_offtopic() -> None:
@@ -242,5 +285,12 @@ def test_client_response_does_not_expose_internal_phrases() -> None:
         "на основе подготовленных комментариев",
         "менеджер может",
         "сначала подтвердите",
+        "легкий вопрос",
+        "отвечу коротко",
+        "по-доброму",
+        "по рабочей части",
+        "продолжаю по текущему диалогу",
+        "сообщение понял",
+        "спасибо за обращение",
     ):
         assert forbidden not in lowered

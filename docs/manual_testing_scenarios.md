@@ -274,7 +274,7 @@ Expected:
 - all registered clients are visible;
 - client type is visible to manager/admin as `Действующий клиент` or `Потенциальный клиент`;
 - each row shows client identifier, name/login/email, total appeals, active appeals, last appeal date and last uploaded report date.
-- the table fits inside the card at normal desktop width and action buttons stay vertically aligned after changing client type;
+- the client cards fit inside the section at normal desktop width and action buttons stay vertically aligned after changing client type;
 - `К обращениям` opens `/manager/dashboard` filtered by that client;
 - the dashboard heading says `Обращения клиента: ...` and has `Все обращения`.
 - active clients have an `Отчеты` action that opens one persistent report chat;
@@ -294,7 +294,8 @@ Expected:
 
 - response is polite and light;
 - response redirects to advertising context;
-- response asks 1-2 useful questions;
+- response does not restart the full advertising brief;
+- response gently connects the image/message to a possible advertising creative or publication idea;
 - response does not expose internal words like `fallback`, `llama.cpp`, `local_rules`, `prompt`.
 
 ## 16. Fallback when llama.cpp is disabled
@@ -398,4 +399,5 @@ Expected:
 - search placeholder says `Поиск по логину, email или имени`;
 - search input visually matches the pastel filters;
 - `/admin/dashboard` has `Рейтинг менеджеров` with all managers and `нет оценок` where needed;
+- the rating section shows overall average manager rating and number of rated appeals;
 - single appeal detail does not duplicate a manager rating block.

@@ -53,6 +53,7 @@ def test_manager_clients_template_limits_report_action_to_active_clients() -> No
     assert 'row.client.client_type == "active_client"' in text
     assert "data-autosubmit" in text
     assert "Сохранить</button>" not in text
+    assert "manager-client-card" in text
     assert "manager-client-actions" in text
 
 
@@ -71,6 +72,8 @@ def test_admin_appeal_views_do_not_duplicate_manager_rating_block() -> None:
     assert "Рейтинг менеджера" not in appeal_detail
     assert 'current_user.role == "manager"' in manager_dashboard
     assert "Рейтинг менеджеров" in admin_dashboard
+    assert "Средняя оценка менеджеров" in admin_dashboard
+    assert "Оцененных обращений" in admin_dashboard
 
 
 def test_manager_templates_show_tone_summary_only_outside_client_views() -> None:

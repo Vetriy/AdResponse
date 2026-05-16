@@ -11,7 +11,7 @@ from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
 from app.services.analytics import build_admin_analytics, status_rows_for_chart
-from app.services.feedback import manager_rating_rows
+from app.services.feedback import manager_rating_rows, manager_rating_summary
 
 templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
@@ -125,6 +125,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
                 "active_page": "admin",
                 "stats": stats,
                 "analytics": analytics,
+                "manager_rating_summary": manager_rating_summary(db),
                 "manager_ratings": manager_rating_rows(db),
                 "status_chart_rows": status_rows_for_chart(analytics["appeals"]["status_counts"]),
             },

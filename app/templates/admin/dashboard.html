@@ -86,6 +86,16 @@
       <h2>Рейтинг менеджеров</h2>
       <span class="badge badge--mint">{{ manager_ratings|length }}</span>
     </div>
+    <div class="rating-summary">
+      <div>
+        <span>Средняя оценка менеджеров</span>
+        <strong>{{ manager_rating_summary.average_rating if manager_rating_summary and manager_rating_summary.average_rating else "нет оценок" }}</strong>
+      </div>
+      <div>
+        <span>Оцененных обращений</span>
+        <strong>{{ manager_rating_summary.rated_count if manager_rating_summary else 0 }}</strong>
+      </div>
+    </div>
     {% if manager_ratings %}
       <div class="table-wrap">
         <table class="data-table">
