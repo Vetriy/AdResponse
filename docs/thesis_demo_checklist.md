@@ -26,39 +26,43 @@ uvicorn app.main:app --reload
 
 1. Open the home page and briefly explain the goal.
 2. Login as `admin`.
-3. Show clean admin navigation: `Главная`, `Админ`, `Пользователи`, `База знаний`, `Выход`.
+3. Show clean admin navigation: `Главная`, `Админ`, `Обращения`, `Пользователи`, `База знаний`, `Выход`.
 4. Open `/admin/dashboard` and show grouped analytics with local chart-like blocks: users by role, appeals by status group, comments by activity and AI-answer feedback.
 5. Show manager rating table on `/admin/dashboard`.
 6. Open `/admin/users` and show Russian role labels; quick enable/disable and delete/archive are hidden for administrators.
 7. Show client type editing: `Действующий клиент` and `Потенциальный клиент`; explain that clients do not see this internal label.
 8. Open `/admin/knowledge-base` and show categories above prepared comment cards.
-9. Toggle a category and prepared comment and show `Выключить` / `Включить` changes.
-10. Add a prepared manager comment for a category.
-11. Logout and login as `client`.
-12. Open `/chat/` and send a neutral cost request with an attachment.
-13. Show Russian category, clarifying questions and safe answer; note that emotional tone is hidden from the client UI.
-14. Return to `/client/dashboard`, open the appeal and continue the same dialogue; show that the next autoanswer uses earlier messages and does not repeat already answered questions.
-15. Click `Новое обращение` and show that a separate appeal is created.
-16. Send a negative or low-leads request after viewing a report scenario.
-17. Show tone-aware response that reduces negativity and offers manager handover.
-18. Logout and login as `manager`.
-19. Open `/manager/`.
-20. Show grouped appeal list, filters, client identifier, `Обращение №...` and sorting by latest client activity.
-21. Show that `Новое` badges appear only for actionable active appeals and that manager screens show `Текущий тон клиента`.
-22. Open `/manager/clients` and show client summary; click `К обращениям` to filter appeals by that client.
-23. Open appeal detail.
-24. Accept the appeal and explain that it закрепляет диалог за менеджером.
-25. Show that accepting the appeal turns off autoanswers for that appeal, and demonstrate the toggle.
-26. Upload an advertising report for the active client.
-27. Open `/manager/clients`, show active clients first, aligned client cards, auto-save client type dropdowns, and the persistent report chat only for active clients.
-28. Send a manual manager response with an attachment.
-29. Finish the appeal.
-30. Login as client, show the single report chat in dashboard, ask a report-related question, show report-chat auto reply behavior and rate the completed appeal.
-31. Show message layout: daily separators, bottom send time, client name, manager name with `Менеджер`, and no top signature on automatic responses.
-32. Show unread badges before opening a chat and that they disappear after opening.
-33. Like/dislike an automatic answer and show the aggregate on admin dashboard.
-34. Send `Как вам котик?` and show the short connection to an advertising creative idea.
-35. Explain fallback mode and optional local `llama.cpp` mode.
+9. Search prepared comments by title/text/category/tone and show the search field.
+10. Toggle a category and prepared comment and show `Выключить` / `Включить` changes.
+11. Show that the category disable explanation appears once above the category list.
+12. Add and delete a prepared manager comment for a category.
+13. Try deleting a category with comments and show the safe blocking message.
+14. Open `Обращения` as admin and show regular appeals plus `Чаты по отчетам`; the role badge says `Администратор`.
+15. Logout and login as `client`.
+16. Open `/chat/` and send a neutral cost request with an attachment.
+17. Show Russian category, clarifying questions and safe answer; note that emotional tone is hidden from the client UI.
+18. Return to `/client/dashboard`, open the appeal and continue the same dialogue; show that the next autoanswer uses earlier messages and does not repeat already answered questions.
+19. Click `Новое обращение` and show that a separate appeal is created.
+20. Send a negative or low-leads request after viewing a report scenario.
+21. Show tone-aware response that reduces negativity and offers manager handover.
+22. Logout and login as `manager`.
+23. Open `/manager/`.
+24. Show grouped appeal list, filters, client identifier, `Обращение №...` and sorting by latest client activity.
+25. Show that `Новое` badges appear only for actionable active appeals and that manager screens show `Текущий тон клиента`.
+26. Open `/manager/clients` and show client summary; click `К обращениям` to filter appeals by that client.
+27. Open appeal detail.
+28. Accept the appeal and explain that it закрепляет диалог за менеджером.
+29. Show that accepting the appeal turns off autoanswers for that appeal, and demonstrate the toggle.
+30. Upload an advertising report for the active client.
+31. Open `/manager/clients`, show active clients first, aligned client cards, auto-save client type dropdowns, and the persistent report chat only for active clients.
+32. Send a manual manager response with an attachment.
+33. Finish the appeal.
+34. Login as client, show the single report chat in dashboard, ask a report-related question, show report-chat auto reply behavior and rate the completed appeal.
+35. Show message layout: daily separators, bottom send time, client name, manager name with `Менеджер`, and no top signature on automatic responses.
+36. Show unread badges before opening a chat and that they disappear after opening.
+37. Like/dislike an automatic answer and show the aggregate on admin dashboard.
+38. Send `Как вам котик?` and show the short connection to an advertising creative idea.
+39. Explain fallback mode and optional local `llama.cpp` mode.
 
 ## What to emphasize
 
@@ -120,13 +124,17 @@ uvicorn app.main:app --reload
 - [ ] Client, manager and system message labels follow the messenger-style rules.
 - [ ] Unread indicators appear for manager/client messages and clear after opening.
 - [ ] Admin can manage categories.
+- [ ] Admin can delete categories only when no prepared comments are attached.
 - [ ] Admin can manage prepared comments.
+- [ ] Admin can search and delete prepared comments.
+- [ ] Admin can view report chats from `Обращения`.
 - [ ] Documentation explains setup and usage.
 
 ## Honest limitations
 
 - No production deployment scripts.
 - No advanced semantic search for knowledge base comments.
+- Knowledge base search is a simple text filter, not semantic search.
 - Read markers are simple per conversation and role, not detailed per-user read receipts.
 - Local NLP uses keyword rules.
 - Report files are not parsed automatically; only title and description are used as context.

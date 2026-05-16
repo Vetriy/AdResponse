@@ -18,6 +18,14 @@ class ManagerClientRow:
     unread_report_messages: int
 
 
+@dataclass(frozen=True)
+class AdminReportConversationRow:
+    conversation: Conversation
+    client: User | None
+    latest_activity: datetime | None
+    reports: list[AdvertisingReport]
+
+
 def resolve_appeal_client(appeal: Appeal | None) -> User | None:
     if appeal is None or appeal.conversation is None or appeal.conversation.client_session is None:
         return None
@@ -145,6 +153,38 @@ def group_manager_appeals(appeals: list[Appeal], current_manager_id: int | None)
     for appeal in sorted_appeals:
         groups[assignment_group(appeal, current_manager_id)].append(appeal)
     return groups
+
+
+def latest_report_conversation_activity(conversation: Conversation) -> datetime | None:
+    dates = [message.created_at for message in conversation.messages if message.created_at]
+    dates.extend(report.created_at for report in conversation.advertising_reports if report.created_at)
+    if dates:
+        return max(dates)
+    return conversation.created_at
+
+
+def list_admin_report_conversations(db: Session) -> list[AdminReportConversationRow]:
+    conversations = list(
+        db.scalars(
+            select(Conversation)
+            .where(Conversation.conversation_type == "report_thread")
+            .options(
+                selectinload(Conversation.client_session).selectinload(ClientSession.user),
+                selectinload(Conversation.messages),
+                selectinload(Conversation.advertising_reports),
+            )
+        )
+    )
+    rows = [
+        AdminReportConversationRow(
+            conversation=conversation,
+            client=conversation.client_session.user if conversation.client_session else None,
+            latest_activity=latest_report_conversation_activity(conversation),
+            reports=sorted(conversation.advertising_reports, key=lambda report: report.created_at or datetime.min, reverse=True),
+        )
+        for conversation in conversations
+    ]
+    return sorted(rows, key=lambda row: row.latest_activity or datetime.min, reverse=True)
 
 
 def list_manager_clients(db: Session) -> list[ManagerClientRow]:

@@ -1,4 +1,4 @@
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -12,6 +12,7 @@ from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
 from app.services.analytics import build_admin_analytics, status_rows_for_chart
 from app.services.feedback import manager_rating_rows, manager_rating_summary
+from app.services.labels import category_label, tone_label
 
 templates = create_templates()
 router = APIRouter(prefix="/admin", tags=["knowledge base"])
@@ -67,6 +68,46 @@ def toggle_category_active(category: Category | None) -> bool:
         for item in category.knowledge_base_items:
             item.is_active = False
     return True
+
+
+def filter_knowledge_items(items: list[KnowledgeBaseItem], search: str = "") -> list[KnowledgeBaseItem]:
+    query = search.strip().lower()
+    if not query:
+        return items
+    filtered = []
+    for item in items:
+        category_name = item.category.name if item.category else ""
+        haystack = " ".join(
+            [
+                item.title or "",
+                item.content or "",
+                category_name,
+                category_label(category_name),
+                item.emotional_tone or "",
+                tone_label(item.emotional_tone),
+            ]
+        ).lower()
+        if query in haystack:
+            filtered.append(item)
+    return filtered
+
+
+def delete_knowledge_item(db, item: KnowledgeBaseItem | None) -> bool:
+    if item is None:
+        return False
+    db.delete(item)
+    return True
+
+
+def category_delete_error(db, category: Category | None) -> str:
+    if category is None:
+        return "Категория не найдена."
+    if category.knowledge_base_items:
+        return "Нельзя удалить категорию, пока к ней привязаны подготовленные комментарии."
+    linked_appeals = db.scalar(select(func.count(Appeal.id)).where(Appeal.category_id == category.id)) or 0
+    if linked_appeals:
+        return "Нельзя удалить категорию, пока к ней привязаны обращения."
+    return ""
 
 
 def apply_user_filters(statement, role: str = "", status: str = "", client_type: str = "", search: str = ""):
@@ -135,12 +176,12 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
 
 
 @router.get("/knowledge-base", response_class=HTMLResponse)
-async def knowledge_base_page(request: Request) -> HTMLResponse:
+async def knowledge_base_page(request: Request, q: str = "", error: str = "", message: str = "") -> HTMLResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     try:
         db = open_db()
-    except Exception as error:
+    except Exception as db_exception:
         return templates.TemplateResponse(
             request,
             "admin/knowledge_base.html",
@@ -149,7 +190,10 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
                 "active_page": "knowledge",
                 "categories": [],
                 "items": [],
-                "db_error": database_error_message(error),
+                "filters": {"q": q},
+                "error": error,
+                "message": message,
+                "db_error": database_error_message(db_exception),
             },
         )
 
@@ -158,13 +202,14 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
         if not hasattr(admin, "id"):
             return admin
         categories = list(db.scalars(select(Category).order_by(Category.name.asc())))
-        items = list(
+        all_items = list(
             db.scalars(
                 select(KnowledgeBaseItem)
                 .options(selectinload(KnowledgeBaseItem.category))
                 .order_by(KnowledgeBaseItem.priority.asc(), KnowledgeBaseItem.created_at.desc())
             )
         )
+        items = filter_knowledge_items(all_items, q)
         return templates.TemplateResponse(
             request,
             "admin/knowledge_base.html",
@@ -173,10 +218,13 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
                 "active_page": "knowledge",
                 "categories": categories,
                 "items": items,
+                "filters": {"q": q},
+                "error": error,
+                "message": message,
                 "db_error": None,
             },
         )
-    except Exception as error:
+    except Exception as db_exception:
         return templates.TemplateResponse(
             request,
             "admin/knowledge_base.html",
@@ -185,7 +233,10 @@ async def knowledge_base_page(request: Request) -> HTMLResponse:
                 "active_page": "knowledge",
                 "categories": [],
                 "items": [],
-                "db_error": database_error_message(error),
+                "filters": {"q": q},
+                "error": error,
+                "message": message,
+                "db_error": database_error_message(db_exception),
             },
         )
     finally:
@@ -334,8 +385,8 @@ async def update_category(
     return redirect_to("/admin/knowledge-base#categories")
 
 
-@router.post("/categories/{category_id}/delete")
-async def delete_category(request: Request, category_id: int) -> RedirectResponse:
+@router.post("/categories/{category_id}/toggle")
+async def toggle_category(request: Request, category_id: int) -> RedirectResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     db = open_db()
@@ -350,6 +401,26 @@ async def delete_category(request: Request, category_id: int) -> RedirectRespons
     finally:
         db.close()
     return redirect_to("/admin/knowledge-base#categories")
+
+
+@router.post("/categories/{category_id}/delete")
+async def delete_category(request: Request, category_id: int) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        category = db.scalar(select(Category).where(Category.id == category_id).options(selectinload(Category.knowledge_base_items)))
+        error = category_delete_error(db, category)
+        if error:
+            return redirect_to(f"/admin/knowledge-base?error={quote(error)}#categories")
+        db.delete(category)
+        db.commit()
+    finally:
+        db.close()
+    return redirect_to(f"/admin/knowledge-base?message={quote('Категория удалена.')}#categories")
 
 
 @router.get("/knowledge-base/items/new", response_class=HTMLResponse)
@@ -510,8 +581,8 @@ async def update_knowledge_item(
     return redirect_to("/admin/knowledge-base#comments")
 
 
-@router.post("/knowledge-base/items/{item_id}/delete")
-async def delete_knowledge_item(request: Request, item_id: int) -> RedirectResponse:
+@router.post("/knowledge-base/items/{item_id}/toggle")
+async def toggle_knowledge_item(request: Request, item_id: int) -> RedirectResponse:
     if not request.session.get("user"):
         return login_redirect(request)
     db = open_db()
@@ -526,6 +597,23 @@ async def delete_knowledge_item(request: Request, item_id: int) -> RedirectRespo
     finally:
         db.close()
     return redirect_to("/admin/knowledge-base#comments")
+
+
+@router.post("/knowledge-base/items/{item_id}/delete")
+async def delete_knowledge_item_route(request: Request, item_id: int) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        item = db.get(KnowledgeBaseItem, item_id)
+        if delete_knowledge_item(db, item):
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to(f"/admin/knowledge-base?message={quote('Комментарий удален.')}#comments")
 
 
 @router.get("/users", response_class=HTMLResponse)

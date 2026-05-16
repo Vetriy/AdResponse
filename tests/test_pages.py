@@ -79,6 +79,28 @@ def test_admin_appeal_views_do_not_duplicate_manager_rating_block() -> None:
     assert "Оцененных обращений" in admin_dashboard
 
 
+def test_admin_manager_templates_show_admin_role_label_in_admin_context() -> None:
+    for template in (
+        "app/templates/manager/dashboard.html",
+        "app/templates/manager/appeal_detail.html",
+        "app/templates/manager/report_thread.html",
+        "app/templates/manager/clients.html",
+    ):
+        text = Path(template).read_text()
+        assert "role_label(current_user.role)" in text
+        assert 'current_user.role == \'admin\'' in text or 'current_user.role == "admin"' in text
+
+
+def test_admin_knowledge_base_template_has_search_delete_and_single_category_explanation() -> None:
+    text = Path("app/templates/admin/knowledge_base.html").read_text()
+
+    assert "Поиск по заголовку или тексту комментария" in text
+    assert 'action="/admin/knowledge-base/items/{{ item.id }}/delete"' in text
+    assert 'action="/admin/categories/{{ category.id }}/delete"' in text
+    assert text.count("При выключении категории связанные подготовленные комментарии также становятся неактивными") == 1
+    assert "При выключении категории ее комментарии тоже будут выключены." not in text
+
+
 def test_manager_templates_show_tone_summary_only_outside_client_views() -> None:
     manager_dashboard = Path("app/templates/manager/dashboard.html").read_text()
     manager_detail = Path("app/templates/manager/appeal_detail.html").read_text()

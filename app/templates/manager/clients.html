@@ -2,7 +2,7 @@
 
 {% block content %}
   <section class="page-title">
-    <span class="badge badge--mint">Менеджер</span>
+    <span class="badge {{ 'badge--peach' if current_user.role == 'admin' else 'badge--mint' }}">{{ role_label(current_user.role) }}</span>
     <h1>Клиенты</h1>
     <p>Сводка по зарегистрированным клиентам, их обращениям и последним загруженным рекламным отчетам.</p>
   </section>

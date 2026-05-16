@@ -640,6 +640,11 @@ p {
   padding: 12px 16px;
 }
 
+.form-hint--success {
+  background: #f0fbf6;
+  color: #47755d;
+}
+
 .side-panel {
   align-self: start;
 }
@@ -769,6 +774,10 @@ p {
 
 .filter-bar--users {
   grid-template-columns: minmax(130px, 0.8fr) minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(260px, 1.4fr) auto;
+}
+
+.filter-bar--knowledge {
+  grid-template-columns: minmax(260px, 1fr) auto auto;
 }
 
 .filter-notice {

@@ -13,12 +13,19 @@
       <p>{{ db_error }}</p>
     </section>
   {% else %}
+    {% if error %}
+      <p class="form-hint form-hint--card">{{ error }}</p>
+    {% endif %}
+    {% if message %}
+      <p class="form-hint form-hint--card form-hint--success">{{ message }}</p>
+    {% endif %}
     <section class="knowledge-layout knowledge-layout--stacked">
       <aside class="card side-panel knowledge-categories" id="categories">
         <div class="table-card__header">
           <h2>Категории</h2>
           <a class="button button--secondary" href="/admin/categories/new">Добавить</a>
         </div>
+        <p class="table-note">При выключении категории связанные подготовленные комментарии также становятся неактивными и не используются в новых автоответах.</p>
 
         <div class="category-list">
           {% for category in categories %}
@@ -30,13 +37,14 @@
               <span class="badge {{ 'badge--mint' if category.is_active else 'badge--peach' }}">{{ "активна" if category.is_active else "выключена" }}</span>
               <div class="inline-actions">
                 <a href="/admin/categories/{{ category.id }}/edit">Править</a>
-                <form method="post" action="/admin/categories/{{ category.id }}/delete">
+                <form method="post" action="/admin/categories/{{ category.id }}/toggle">
                   <button type="submit">{{ "Выключить" if category.is_active else "Включить" }}</button>
                 </form>
+                <form method="post" action="/admin/categories/{{ category.id }}/delete" onsubmit="return confirm('Удалить категорию?');">
+                  <button type="submit">Удалить</button>
+                </form>
               </div>
-              {% if category.is_active %}
-                <p class="table-note">При выключении категории ее комментарии тоже будут выключены.</p>
-              {% else %}
+              {% if not category.is_active %}
                 <p class="table-note">При включении категории комментарии останутся в текущем состоянии.</p>
               {% endif %}
             </article>
@@ -54,6 +62,16 @@
           <h2>Подготовленные комментарии</h2>
           <a class="button button--primary" href="/admin/knowledge-base/items/new">Добавить</a>
         </div>
+        <form class="filter-bar filter-bar--knowledge" method="get" action="/admin/knowledge-base#comments">
+          <label>
+            <span>Поиск</span>
+            <input class="pastel-search" name="q" value="{{ filters.q }}" placeholder="Поиск по заголовку или тексту комментария">
+          </label>
+          <button class="button button--secondary" type="submit">Найти</button>
+          {% if filters.q %}
+            <a class="button button--ghost" href="/admin/knowledge-base#comments">Сбросить</a>
+          {% endif %}
+        </form>
 
         {% if items %}
           <div class="kb-card-list">
@@ -74,8 +92,11 @@
                 </div>
                 <div class="kb-item-card__actions">
                   <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>
-                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete">
+                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/toggle">
                     <button class="button button--ghost button--small" type="submit">{{ "Выключить" if item.is_active else "Включить" }}</button>
+                  </form>
+                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete" onsubmit="return confirm('Удалить подготовленный комментарий?');">
+                    <button class="button button--ghost button--small" type="submit">Удалить</button>
                   </form>
                 </div>
               </article>
@@ -83,8 +104,8 @@
           </div>
         {% else %}
           <div class="empty-state empty-state--compact">
-            <h2>Комментариев пока нет</h2>
-            <p>Добавьте первый подготовленный ответ менеджера для категории обращения.</p>
+            <h2>{% if filters.q %}Ничего не найдено{% else %}Комментариев пока нет{% endif %}</h2>
+            <p>{% if filters.q %}Попробуйте изменить поисковый запрос или сбросить фильтр.{% else %}Добавьте первый подготовленный ответ менеджера для категории обращения.{% endif %}</p>
           </div>
         {% endif %}
       </div>

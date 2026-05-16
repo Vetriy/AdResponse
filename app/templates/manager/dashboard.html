@@ -2,9 +2,9 @@
 
 {% block content %}
   <section class="page-title">
-    <span class="badge badge--mint">Менеджер</span>
+    <span class="badge {{ 'badge--peach' if current_user.role == 'admin' else 'badge--mint' }}">{{ role_label(current_user.role) }}</span>
     <h1>Панель обращений</h1>
-    <p>Рабочий экран для просмотра клиентских запросов, статусов, тональности и передачи диалога менеджеру.</p>
+    <p>{% if current_user.role == "admin" %}Администратор просматривает обычные обращения и чаты по отчетам без изменения клиентского доступа.{% else %}Рабочий экран для просмотра клиентских запросов, статусов, тональности и передачи диалога менеджеру.{% endif %}</p>
   </section>
 
   {% if db_error %}
@@ -80,6 +80,45 @@
         </label>
         <button class="button button--secondary" type="submit">Фильтровать</button>
       </form>
+
+      {% if current_user.role == "admin" %}
+        <div class="appeal-group">
+          <div class="appeal-group__header">
+            <h3>Чаты по отчетам</h3>
+            <span class="badge badge--blue">{{ report_conversations|length }}</span>
+          </div>
+          {% if report_conversations %}
+            <div class="appeal-card-list">
+              {% for row in report_conversations %}
+                {% set latest_activity = row.latest_activity %}
+                <article class="appeal-row-card appeal-row-card--report">
+                  <div>
+                    <span class="badge badge--lavender">Чат по отчетам</span>
+                    <h3>{{ row.conversation.title or "Отчеты по рекламе" }}</h3>
+                    <p>{% if row.client %}{{ row.client.full_name or row.client.username or row.client.email or "Клиент" }} · {{ client_type_label(row.client.client_type) }}{% else %}Клиент не найден{% endif %}</p>
+                  </div>
+                  <div class="appeal-row-card__meta">
+                    <span class="badge badge--blue">Отчеты по рекламе</span>
+                    <span>Активность: {{ latest_activity.strftime("%d.%m.%Y %H:%M") if latest_activity else "нет" }}</span>
+                    {% if row.reports %}
+                      <span>Последний отчет: {{ row.reports[0].title }}</span>
+                    {% else %}
+                      <span>Отчеты еще не загружены</span>
+                    {% endif %}
+                  </div>
+                  {% if row.client %}
+                    <a class="button button--secondary button--small" href="/manager/clients/{{ row.client.id }}/reports">Открыть</a>
+                  {% else %}
+                    <span class="table-note">Клиент не найден</span>
+                  {% endif %}
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="table-note">Чатов по отчетам пока нет.</p>
+          {% endif %}
+        </div>
+      {% endif %}
 
       {% if appeals %}
         {% for group_key, group_title in [

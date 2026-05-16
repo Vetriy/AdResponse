@@ -2,7 +2,7 @@
 
 {% block content %}
   <section class="page-title">
-    <span class="badge badge--mint">Менеджер</span>
+    <span class="badge {{ 'badge--peach' if current_user.role == 'admin' else 'badge--mint' }}">{{ role_label(current_user.role) }}</span>
     <h1>Обращение{% if appeal %} №{{ appeal.id }}{% endif %}</h1>
     <p>История диалога сохраняется полностью: сообщения клиента, системы и менеджера отображаются в одном контексте.</p>
   </section>

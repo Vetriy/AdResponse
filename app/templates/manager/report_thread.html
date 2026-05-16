@@ -2,7 +2,7 @@
 
 {% block content %}
   <section class="page-title">
-    <span class="badge badge--mint">Менеджер</span>
+    <span class="badge {{ 'badge--peach' if current_user.role == 'admin' else 'badge--mint' }}">{{ role_label(current_user.role) }}</span>
     <h1>Отчеты клиента</h1>
     <p>Постоянный чат по отчетам для клиента №{{ client.id }}: {{ client.full_name }}.</p>
   </section>
@@ -50,13 +50,19 @@
           <div class="chat-empty"><strong>Чат пуст</strong><span>Отправьте первый комментарий или загрузите отчет.</span></div>
         {% endfor %}
       </div>
-      <form class="form chat-form" method="post" action="/manager/clients/{{ client.id }}/reports/messages" enctype="multipart/form-data">
-        <label for="manager-report-message">Сообщение клиенту</label>
-        <textarea id="manager-report-message" name="content" rows="3" placeholder="Комментарий к отчету или ответ клиенту"></textarea>
-        <label class="file-field" for="manager-report-attachments">Прикрепить файлы</label>
-        <input id="manager-report-attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-        <button class="button button--primary" type="submit">Отправить</button>
-      </form>
+      {% if client.client_type == "active_client" %}
+        <form class="form chat-form" method="post" action="/manager/clients/{{ client.id }}/reports/messages" enctype="multipart/form-data">
+          <label for="manager-report-message">Сообщение клиенту</label>
+          <textarea id="manager-report-message" name="content" rows="3" placeholder="Комментарий к отчету или ответ клиенту"></textarea>
+          <label class="file-field" for="manager-report-attachments">Прикрепить файлы</label>
+          <input id="manager-report-attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+          <button class="button button--primary" type="submit">Отправить</button>
+        </form>
+      {% else %}
+        <div class="chat-form">
+          <p class="form-hint form-hint--neutral">Клиент сейчас не отмечен как действующий, поэтому чат доступен администратору только для просмотра истории.</p>
+        </div>
+      {% endif %}
     </div>
 
     <aside class="card side-panel">
@@ -67,18 +73,22 @@
         <span>Клиент</span>
         <strong>{{ client.full_name }}</strong>
       </div>
-      <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/auto-reply">
-        <button class="button button--secondary" type="submit">{{ "Выключить автоответы" if conversation.auto_reply_enabled else "Включить автоответы" }}</button>
-      </form>
+      {% if client.client_type == "active_client" %}
+        <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/auto-reply">
+          <button class="button button--secondary" type="submit">{{ "Выключить автоответы" if conversation.auto_reply_enabled else "Включить автоответы" }}</button>
+        </form>
+      {% endif %}
 
-      <h2>Новый отчет</h2>
-      <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/upload" enctype="multipart/form-data">
-        <label for="client-report-title">Название</label>
-        <input id="client-report-title" name="title" placeholder="Например: Отчет за май">
-        <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
-        <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-        <button class="button button--secondary" type="submit">Загрузить отчет</button>
-      </form>
+      {% if client.client_type == "active_client" %}
+        <h2>Новый отчет</h2>
+        <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/upload" enctype="multipart/form-data">
+          <label for="client-report-title">Название</label>
+          <input id="client-report-title" name="title" placeholder="Например: Отчет за май">
+          <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
+          <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+          <button class="button button--secondary" type="submit">Загрузить отчет</button>
+        </form>
+      {% endif %}
 
       <div class="mini-section">
         <h3>Файлы отчетов</h3>

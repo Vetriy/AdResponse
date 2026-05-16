@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
 from app.db.base import Base
@@ -16,11 +16,22 @@ from app.services.manager_workflow import (
     finish_appeal_for_manager,
     get_or_create_report_conversation,
     group_manager_appeals,
+    list_admin_report_conversations,
     mark_conversation_read,
     resolve_appeal_client,
     unread_messages_count,
 )
-from app.routers.admin import apply_user_filters, can_archive_user, form_bool, form_int, slugify, toggle_category_active
+from app.routers.admin import (
+    apply_user_filters,
+    can_archive_user,
+    category_delete_error,
+    delete_knowledge_item,
+    filter_knowledge_items,
+    form_bool,
+    form_int,
+    slugify,
+    toggle_category_active,
+)
 from app.routers.manager import PLACEHOLDER_MANAGER_EMAIL, get_or_create_placeholder_manager
 
 
@@ -85,6 +96,50 @@ def test_report_thread_is_persistent_for_active_client_and_unread_counts_work() 
         db.flush()
 
         assert unread_messages_count(first, "client") == 0
+
+
+def test_admin_report_conversation_rows_include_report_threads_only() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        client = User(
+            username="client",
+            email="c@test.local",
+            full_name="Клиент",
+            role="client",
+            client_type="active_client",
+            hashed_password="x",
+        )
+        manager = User(username="manager", email="m@test.local", full_name="Менеджер", role="manager", hashed_password="x")
+        regular = Conversation(client_session=ClientSession(user=client), conversation_type="appeal", title="Обычное обращение")
+        report = Conversation(client_session=ClientSession(user=client), conversation_type="report_thread", title="Отчеты по рекламе")
+        db.add_all([client, manager, regular, report])
+        db.flush()
+        db.add_all(
+            [
+                Appeal(conversation=regular),
+                Message(conversation=report, sender_type="client", content="Вопрос по отчету"),
+                AdvertisingReport(
+                    client_user_id=client.id,
+                    conversation_id=report.id,
+                    uploaded_by_user_id=manager.id,
+                    title="Отчет за май",
+                    original_filename="may.pdf",
+                    stored_filename="may.pdf",
+                    stored_path="storage/uploads/may.pdf",
+                    size_bytes=100,
+                ),
+            ]
+        )
+        db.commit()
+
+        rows = list_admin_report_conversations(db)
+
+    assert len(rows) == 1
+    assert rows[0].conversation.title == "Отчеты по рекламе"
+    assert rows[0].client is not None and rows[0].client.username == "client"
+    assert rows[0].reports[0].title == "Отчет за май"
 
 
 def test_manager_unread_badge_is_only_actionable_for_current_manager() -> None:
@@ -295,3 +350,47 @@ def test_admin_user_filters_and_category_disable_cascades_comments() -> None:
         assert filtered == [active_client]
         assert category.is_active is False
         assert comment.is_active is False
+
+
+def test_knowledge_item_search_matches_title_content_category_and_tone() -> None:
+    category = Category(slug="service-cost", name="service cost")
+    item = KnowledgeBaseItem(category=category, emotional_tone="negative", title="Цена запуска", content="Расскажем про бюджет")
+    other = KnowledgeBaseItem(category=Category(slug="other", name="other"), emotional_tone="neutral", title="Другое", content="Нет совпадения")
+
+    assert filter_knowledge_items([item, other], "цена") == [item]
+    assert filter_knowledge_items([item, other], "бюджет") == [item]
+    assert filter_knowledge_items([item, other], "Стоимость услуг") == [item]
+    assert filter_knowledge_items([item, other], "негативный") == [item]
+
+
+def test_delete_knowledge_item_removes_comment() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        category = Category(slug="other", name="other")
+        item = KnowledgeBaseItem(category=category, title="Delete me", content="Text")
+        db.add_all([category, item])
+        db.commit()
+
+        assert delete_knowledge_item(db, item) is True
+        db.commit()
+
+        assert db.scalar(select(func.count(KnowledgeBaseItem.id))) == 0
+
+
+def test_category_delete_is_blocked_when_comments_exist() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        category = Category(slug="other", name="other")
+        db.add(category)
+        db.flush()
+        db.add(KnowledgeBaseItem(category=category, title="Comment", content="Text"))
+        db.commit()
+        db.refresh(category)
+
+        error = category_delete_error(db, category)
+
+    assert error == "Нельзя удалить категорию, пока к ней привязаны подготовленные комментарии."

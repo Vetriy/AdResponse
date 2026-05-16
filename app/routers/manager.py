@@ -16,6 +16,7 @@ from app.services.manager_workflow import (
     get_or_create_report_conversation,
     get_report_conversation,
     group_manager_appeals,
+    list_admin_report_conversations,
     list_manager_clients,
     mark_conversation_read,
     resolve_appeal_client_user,
@@ -97,6 +98,7 @@ async def manager_dashboard(
                 "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
                 "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "report_conversations": [],
                 "client_filter": None,
                 "rating_summary": None,
                 "db_error": database_error_message(error),
@@ -140,6 +142,9 @@ async def manager_dashboard(
 
         appeals = list(db.scalars(statement))
         appeal_groups = group_manager_appeals(appeals, current_user.id if current_user.role == "manager" else None)
+        report_conversations = list_admin_report_conversations(db) if current_user.role == "admin" else []
+        if client_filter:
+            report_conversations = [row for row in report_conversations if row.client and row.client.id == client_filter.id]
         return templates.TemplateResponse(
             request,
             "manager/dashboard.html",
@@ -153,6 +158,7 @@ async def manager_dashboard(
                 "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": metrics,
                 "appeal_groups": appeal_groups,
+                "report_conversations": report_conversations,
                 "client_filter": client_filter,
                 "rating_summary": manager_rating_summary(db, current_user.id if current_user.role == "manager" else None),
                 "db_error": None,
@@ -172,6 +178,7 @@ async def manager_dashboard(
                 "filters": {"status": status, "category": category, "tone": tone, "client_id": client_id},
                 "metrics": {"new": 0, "needs_clarification": 0, "needs_manager": 0},
                 "appeal_groups": {"unassigned": [], "mine": [], "other": [], "completed": []},
+                "report_conversations": [],
                 "client_filter": None,
                 "rating_summary": None,
                 "db_error": database_error_message(error),
@@ -541,13 +548,19 @@ async def manager_report_thread(request: Request, client_id: int, error: str = "
         if not hasattr(current_user, "id"):
             return current_user
         client = db.get(User, client_id)
-        if client is None or client.role != "client" or client.client_type != "active_client":
+        existing_report_conversation = get_report_conversation(db, client.id) if client and client.role == "client" else None
+        if (
+            client is None
+            or client.role != "client"
+            or (current_user.role != "admin" and client.client_type != "active_client")
+            or (current_user.role == "admin" and client.client_type != "active_client" and existing_report_conversation is None)
+        ):
             return templates.TemplateResponse(
                 request,
                 "auth/access_denied.html",
                 {"page_title": "Доступ закрыт", "active_page": "manager-clients"},
             )
-        conversation = get_or_create_report_conversation(db, client)
+        conversation = existing_report_conversation or get_or_create_report_conversation(db, client)
         mark_conversation_read(conversation, current_user.role)
         db.commit()
         db.refresh(conversation)

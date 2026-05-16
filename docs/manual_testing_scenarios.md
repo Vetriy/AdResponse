@@ -207,22 +207,30 @@ Steps:
 1. Logout from manager account.
 2. Login as `admin`.
 3. Open `/admin/dashboard` and review statistics cards.
-4. Open `/admin/knowledge-base`.
-5. Click `Добавить` for comments.
-6. Select category, tone, title and priority.
-7. Save.
+4. Open `Обращения` from the top navigation.
+5. Open `/admin/knowledge-base`.
+6. Click `Добавить` for comments.
+7. Select category, tone, title and priority.
+8. Save.
 
 Expected:
 
 - role labels are shown as `Клиент`, `Менеджер`, `Администратор`;
+- admin appeal pages show the role badge `Администратор`, not `Менеджер`;
+- the admin appeals page includes regular appeals and a separate `Чаты по отчетам` block when report chats exist;
+- report chat rows show client identifier, client type, latest activity and report context;
 - comment appears in the list;
 - active comment can be selected by response generation for matching category and tone.
 - prepared comments are readable as wide cards without horizontal scrolling at normal desktop width.
+- prepared comments can be searched by title, text, category or tone through `Поиск по заголовку или тексту комментария`.
 - `Приоритет` is shown in its own clear area, and edit/delete buttons align consistently.
 - category toggle says `Выключить` for active categories and `Включить` for inactive categories;
 - after toggling, the page returns to the categories section.
 - prepared comment toggle says `Выключить` for active comments and `Включить` for inactive comments;
 - after toggling a prepared comment, the page returns to the comments section;
+- `Удалить` for a prepared comment asks for confirmation, removes the knowledge base item and returns to the comments section.
+- `Удалить` for a category with prepared comments is blocked with `Нельзя удалить категорию, пока к ней привязаны подготовленные комментарии.`;
+- the category disable explanation is shown once above the category cards, not repeated inside each active category card.
 - disabled categories and disabled comments are not used for new generated responses.
 - disabling a category also disables its prepared comments;
 - enabling the category again does not automatically re-enable its comments.

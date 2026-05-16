@@ -24,6 +24,7 @@ from app.services.manager_workflow import (
     assignment_badge_label,
     assignment_group,
     latest_client_activity,
+    latest_report_conversation_activity,
     unread_messages_count,
 )
 from app.services.analytics import percent
@@ -57,6 +58,7 @@ def create_templates() -> Jinja2Templates:
         dislike_reason_label=dislike_reason_label,
         dislike_reasons=DISLIKE_REASONS,
         latest_client_activity=latest_client_activity,
+        latest_report_conversation_activity=latest_report_conversation_activity,
         unread_messages_count=unread_messages_count,
         percent=percent,
     )
