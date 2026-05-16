@@ -153,6 +153,8 @@ Expected:
 
 - manager dashboard shows a clear client identifier;
 - dashboard groups show `Без менеджера`, `Закреплено за мной`, `Закреплено за другим менеджером`, `Завершено`;
+- `Новое` appears only for actionable active appeals, not closed appeals or appeals assigned to another manager;
+- manager views show `Текущий тон клиента`;
 - assigned manager becomes the current manager;
 - helper text explains that accepting means закрепить диалог за собой;
 - manager message appears in dialogue history;
@@ -272,6 +274,7 @@ Expected:
 - all registered clients are visible;
 - client type is visible to manager/admin as `Действующий клиент` or `Потенциальный клиент`;
 - each row shows client identifier, name/login/email, total appeals, active appeals, last appeal date and last uploaded report date.
+- the table fits inside the card at normal desktop width and action buttons stay vertically aligned after changing client type;
 - `К обращениям` opens `/manager/dashboard` filtered by that client;
 - the dashboard heading says `Обращения клиента: ...` and has `Все обращения`.
 - active clients have an `Отчеты` action that opens one persistent report chat;
@@ -379,3 +382,20 @@ Expected:
 - manager message metadata shows manager name and `Менеджер`;
 - automatic system response has no top name/signature;
 - attachments remain visible and readable inside the message bubble.
+
+## 22. Admin users and ratings
+
+Steps:
+
+1. Login as `admin`.
+2. Open `/admin/users`.
+3. Check the search field and filters.
+4. Open `/admin/dashboard`.
+5. Open an appeal through the admin `Обращения` link.
+
+Expected:
+
+- search placeholder says `Поиск по логину, email или имени`;
+- search input visually matches the pastel filters;
+- `/admin/dashboard` has `Рейтинг менеджеров` with all managers and `нет оценок` where needed;
+- single appeal detail does not duplicate a manager rating block.

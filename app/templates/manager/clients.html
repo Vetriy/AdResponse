@@ -26,14 +26,14 @@
           <table class="data-table data-table--clients">
             <thead>
               <tr>
-                <th>Клиент</th>
-                <th>Тип</th>
+                <th class="col-client">Клиент</th>
+                <th class="col-client-type">Тип</th>
                 <th class="col-login">Логин / Email</th>
-                <th>Всего обращений</th>
-                <th>Активные</th>
-                <th>Последнее обращение</th>
-                <th>Последний отчет</th>
-                <th></th>
+                <th class="col-count">Всего обращений</th>
+                <th class="col-count">Активные</th>
+                <th class="col-date">Последнее обращение</th>
+                <th class="col-date">Последний отчет</th>
+                <th class="col-actions"></th>
               </tr>
             </thead>
             <tbody>
@@ -49,17 +49,17 @@
                       </select>
                     </form>
                   </td>
-                  <td>{{ row.client.username }}<br><span class="table-note">{{ row.client.email }}</span></td>
+                  <td class="client-login-cell"><strong>{{ row.client.username }}</strong><br><span class="table-note">{{ row.client.email }}</span></td>
                   <td>{{ row.total_appeals }}</td>
                   <td>{{ row.active_appeals }}</td>
                   <td>{{ row.last_appeal_at.strftime("%d.%m.%Y %H:%M") if row.last_appeal_at else "нет обращений" }}</td>
                   <td>{{ row.last_report_at.strftime("%d.%m.%Y %H:%M") if row.last_report_at else "нет отчетов" }}</td>
-                  <td class="table-actions table-actions--row">
+                  <td class="table-actions table-actions--row manager-client-actions">
                     <a class="button button--secondary button--small" href="/manager/dashboard?client_id={{ row.client.id }}">К обращениям</a>
                     {% if row.client.client_type == "active_client" %}
                       <a class="button button--primary button--small" href="/manager/clients/{{ row.client.id }}/reports">Отчеты{% if row.unread_report_messages %} · {{ row.unread_report_messages }}{% endif %}</a>
                     {% else %}
-                      <span class="table-note">Отчеты недоступны</span>
+                      <span class="table-note manager-client-actions__placeholder">Отчеты недоступны</span>
                     {% endif %}
                   </td>
                 </tr>

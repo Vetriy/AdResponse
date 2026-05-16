@@ -100,7 +100,7 @@
           <tbody>
             {% for row in manager_ratings %}
               <tr>
-                <td>{{ row.manager.full_name }}</td>
+                <td>{{ row.manager.full_name or row.manager.username or row.manager.email }}</td>
                 <td>{{ row.manager.username }}<br><span class="table-note">{{ row.manager.email }}</span></td>
                 <td>{{ row.summary.average_rating if row.summary.average_rating else "нет оценок" }}</td>
                 <td>{{ row.summary.rated_count }}</td>

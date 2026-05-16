@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
@@ -7,6 +9,7 @@ from app.services.analytics import build_admin_analytics, grouped_appeal_status,
 from app.services.feedback import manager_rating_rows, manager_rating_summary, normalize_ai_feedback, store_or_update_ai_feedback
 from app.services.labels import client_type_label, latest_generated_response, source_label
 from app.services.manager_workflow import (
+    actionable_manager_unread_count,
     assignment_group,
     change_client_type,
     client_type_sort_key,
@@ -82,6 +85,23 @@ def test_report_thread_is_persistent_for_active_client_and_unread_counts_work() 
         db.flush()
 
         assert unread_messages_count(first, "client") == 0
+
+
+def test_manager_unread_badge_is_only_actionable_for_current_manager() -> None:
+    current_manager_id = 10
+    other_manager_id = 20
+    message_at = datetime(2026, 5, 16, 12, 0)
+    unread_message = Message(sender_type="client", content="Нужен ответ", created_at=message_at)
+
+    unassigned = Appeal(status="new", conversation=Conversation(messages=[unread_message]))
+    mine = Appeal(status="assigned_to_manager", assigned_manager_id=current_manager_id, conversation=Conversation(messages=[Message(sender_type="client", content="Мое", created_at=message_at)]))
+    other = Appeal(status="assigned_to_manager", assigned_manager_id=other_manager_id, conversation=Conversation(messages=[Message(sender_type="client", content="Чужое", created_at=message_at)]))
+    closed = Appeal(status="closed", assigned_manager_id=current_manager_id, conversation=Conversation(messages=[Message(sender_type="client", content="Закрыто", created_at=message_at)]))
+
+    assert actionable_manager_unread_count(unassigned, current_manager_id, "manager") == 1
+    assert actionable_manager_unread_count(mine, current_manager_id, "manager") == 1
+    assert actionable_manager_unread_count(other, current_manager_id, "manager") == 0
+    assert actionable_manager_unread_count(closed, current_manager_id, "manager") == 0
 
 
 def test_manager_client_helpers_sort_active_first_and_change_type() -> None:

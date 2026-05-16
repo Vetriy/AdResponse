@@ -125,6 +125,20 @@ def unread_messages_count(conversation: Conversation | None, role: str) -> int:
     )
 
 
+def is_manager_unread_actionable(appeal: Appeal | None, current_manager_id: int | None) -> bool:
+    if appeal is None or appeal.status == "closed":
+        return False
+    if appeal.assigned_manager_id is None:
+        return True
+    return current_manager_id is not None and appeal.assigned_manager_id == current_manager_id
+
+
+def actionable_manager_unread_count(appeal: Appeal | None, current_manager_id: int | None, role: str) -> int:
+    if not is_manager_unread_actionable(appeal, current_manager_id):
+        return 0
+    return unread_messages_count(appeal.conversation if appeal else None, role)
+
+
 def group_manager_appeals(appeals: list[Appeal], current_manager_id: int | None) -> dict[str, list[Appeal]]:
     sorted_appeals = sorted(appeals, key=latest_client_activity, reverse=True)
     groups = {"unassigned": [], "mine": [], "other": [], "completed": []}

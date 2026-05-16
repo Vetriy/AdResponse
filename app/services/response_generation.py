@@ -71,7 +71,7 @@ MISSING_INFO_QUESTIONS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "campaign launch": (
         ("Какой продукт или услугу нужно продвигать?", ("продукт", "услуг", "товар", "ниша")),
         ("В каком регионе и для какой аудитории планируется запуск?", ("регион", "аудитор", "клиент")),
-        ("Есть ли уже сайт, лендинг или материалы для рекламы?", ("сайт", "лендинг", "материал")),
+        ("Есть ли уже сайт, лендинг или материалы для рекламы?", ("сайт", "лендинг", "посадочн", "материал")),
     ),
     "low number of leads": (
         ("За какой период вы оцениваете количество заявок?", ("период", "недел", "месяц", "день")),
@@ -159,9 +159,17 @@ def knowledge_summary_for_client(category: str, emotional_tone: str, knowledge_i
 
 def opening_for(category: str, emotional_tone: str, unusual: bool, has_previous_system: bool) -> str:
     if unusual:
-        return "Сообщение понял. Отвечу легко: звучит приятно и по-доброму."
+        return "Легкий вопрос, отвечу коротко и по-доброму."
     if has_previous_system:
-        return "Спасибо, продолжаю по текущему диалогу."
+        if category == "service cost":
+            return "По новым вводным можно точнее сузить расчет."
+        if category == "campaign launch":
+            return "Продолжим подготовку запуска по тем деталям, которые уже есть."
+        if category in {"low number of leads", "dissatisfaction with campaign results"}:
+            return "Продолжим разбор по фактам, без повторного сбора уже понятных вводных."
+        if category == "limited budget":
+            return "С учетом бюджета лучше оставить в фокусе самый важный результат."
+        return "Продолжим от уже собранного контекста."
     if category == "service cost":
         return "По стоимости сориентируем аккуратно: цена зависит от нескольких вводных, поэтому точную сумму без них не придумываю."
     if category == "campaign launch":
@@ -193,6 +201,13 @@ def is_advertising_related(text: str, category: str) -> bool:
     return any(marker in normalized for marker in ADVERTISING_CONTEXT_MARKERS)
 
 
+def asks_about_landing_page(text: str) -> bool:
+    normalized = text.lower()
+    landing_markers = ("посадочн", "лендинг", "landing")
+    question_markers = ("что это", "не знаю", "объясн", "расскаж", "не понимаю", "что такое")
+    return any(marker in normalized for marker in landing_markers) and any(marker in normalized for marker in question_markers)
+
+
 def generate_fallback_response(
     text: str,
     category: str,
@@ -202,10 +217,20 @@ def generate_fallback_response(
     dialogue_context: DialogueContext | None = None,
 ) -> GeneratedChatResponse:
     context = dialogue_context or DialogueContext(latest_client_message=text, report_context=report_context)
-    context_text = context.all_text
-    questions = build_clarifying_questions(text, category, context_text)
+    answered_context = "\n".join(
+        part
+        for part in [
+            *context.previous_client_messages,
+            *context.previous_manager_messages,
+            context.latest_client_message,
+            context.report_context or "",
+        ]
+        if part
+    )
+    questions = build_clarifying_questions(text, category, answered_context)
     unusual = is_playful_or_unusual(text, category)
     advertising_related = is_advertising_related(text, category)
+    landing_page_question = asks_about_landing_page(text)
     if unusual and not questions:
         questions = [
             "Хотите обсудить продвижение, результаты отчета или материалы для рекламной кампании?",
@@ -214,7 +239,12 @@ def generate_fallback_response(
     handover_offered = category in COMPLEX_CATEGORIES or emotional_tone in NEGATIVE_TONES
     parts: list[str] = []
 
-    if unusual:
+    if landing_page_question:
+        parts.append(
+            "Посадочная страница - это страница, куда переходит человек после клика по рекламе. На ней обычно размещают предложение, преимущества, форму заявки, кнопку звонка или записи."
+        )
+        parts.append("Для запуска рекламы можно использовать существующий сайт, отдельный лендинг или страницу услуги.")
+    elif unusual:
         parts.append(opening_for(category, emotional_tone, unusual, bool(context.previous_system_messages)))
         parts.append("А по рабочей части могу помочь с продвижением, отчетами, материалами кампании или вопросом для менеджера.")
     elif category == "contact manager request":
@@ -230,10 +260,12 @@ def generate_fallback_response(
     if active_report_context:
         parts.append(f"Учитываю контекст отчета: {active_report_context}. Я вижу только название и описание отчета, без автоматического разбора содержимого файла.")
 
-    if not unusual:
+    if not unusual and not landing_page_question:
         parts.append(knowledge_summary_for_client(category, emotional_tone, knowledge_items))
 
-    if category == "service cost":
+    if landing_page_question:
+        parts.append("Если такой страницы пока нет, это не блокирует старт обсуждения: можно оценить, подойдет ли текущий сайт или нужна отдельная страница под рекламу.")
+    elif category == "service cost":
         parts.append("Чтобы сориентировать по запуску, важно понять нишу, регион, цель, подходящие каналы и комфортный бюджетный диапазон.")
     elif category == "campaign launch":
         parts.append("После этих вводных можно предложить безопасный первый шаг без обещаний точных результатов заранее.")

@@ -26,11 +26,13 @@
         <span>Переданы менеджеру</span>
         <strong>{{ metrics.needs_manager }}</strong>
       </article>
-      <article class="metric-card card">
-        <span>Рейтинг менеджера</span>
-        <strong>{{ rating_summary.average_rating if rating_summary and rating_summary.average_rating else "—" }}</strong>
-        <small>{{ rating_summary.rated_count if rating_summary else 0 }} оценок</small>
-      </article>
+      {% if current_user.role == "manager" %}
+        <article class="metric-card card">
+          <span>Рейтинг менеджера</span>
+          <strong>{{ rating_summary.average_rating if rating_summary and rating_summary.average_rating else "—" }}</strong>
+          <small>{{ rating_summary.rated_count if rating_summary else 0 }} оценок</small>
+        </article>
+      {% endif %}
     </section>
 
     <section class="card table-card">
@@ -94,13 +96,15 @@
             {% if appeal_groups[group_key] %}
               <div class="appeal-card-list">
                 {% for appeal in appeal_groups[group_key] %}
+                  {% set actionable_unread = actionable_manager_unread_count(appeal, current_user.id if current_user.role == "manager" else none, current_user.role) %}
                   <article class="appeal-row-card appeal-row-card--{{ group_key }}">
                     <div>
                       <span class="badge assignment-{{ group_key }}">{{ assignment_badge_label(group_key) }}</span>
-                      <h3>Обращение №{{ appeal.id }}{% if unread_messages_count(appeal.conversation, current_user.role) %} <span class="badge badge--peach">Новое: {{ unread_messages_count(appeal.conversation, current_user.role) }}</span>{% endif %}</h3>
+                      <h3>Обращение №{{ appeal.id }}{% if actionable_unread %} <span class="badge badge--peach">Новое: {{ actionable_unread }}</span>{% endif %}</h3>
                       <p>{{ client_identifier(appeal) }} · {{ appeal_category_label(appeal) }}</p>
                     </div>
                     <div class="appeal-row-card__meta">
+                      <span>Текущий тон клиента: {{ tone_label(appeal.emotional_tone) }}</span>
                       <span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span>
                       <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
                       <span>Активность: {{ latest_client_activity(appeal).strftime("%d.%m.%Y %H:%M") }}</span>

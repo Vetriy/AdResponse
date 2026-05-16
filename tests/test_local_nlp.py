@@ -93,6 +93,48 @@ def test_dialogue_context_avoids_repeating_answered_questions() -> None:
     assert "услугу" not in lowered_questions
 
 
+def test_follow_up_response_does_not_start_with_repetitive_template_phrase() -> None:
+    context = DialogueContext(
+        latest_client_message="Бюджет до 80 тысяч, Москва.",
+        previous_client_messages=("Сколько стоит реклама для салона красоты?",),
+        previous_system_messages=("Уточните регион и бюджет.",),
+    )
+
+    result = generate_fallback_response(
+        text=context.latest_client_message,
+        category="service cost",
+        emotional_tone="interested",
+        knowledge_items=[],
+        dialogue_context=context,
+    )
+    lowered = result.text.lower()
+
+    assert not lowered.startswith("спасибо")
+    assert "спасибо, продолжаю по текущему диалогу" not in lowered
+    assert "спасибо за обращение" not in lowered
+    assert "сообщение понял" not in lowered
+
+
+def test_landing_page_explanation_is_natural_for_follow_up_question() -> None:
+    result = generate_fallback_response(
+        text="Посадочная страница я не знаю что это такое, объясните",
+        category="campaign launch",
+        emotional_tone="neutral",
+        knowledge_items=[],
+        dialogue_context=DialogueContext(
+            latest_client_message="Посадочная страница я не знаю что это такое, объясните",
+            previous_client_messages=("Хотим запустить рекламу новой услуги в Москве.",),
+            previous_system_messages=("Есть ли сайт, лендинг или материалы?",),
+        ),
+    )
+    lowered = result.text.lower()
+
+    assert "страница, куда переходит человек после клика по рекламе" in lowered
+    assert "существующий сайт" in lowered
+    assert "отдельный лендинг" in lowered
+    assert "есть ли уже сайт, лендинг или материалы" not in lowered
+
+
 def test_prepared_comments_are_internal_source_material_only() -> None:
     item = SimpleNamespace(content="Сначала подтвердите проблему, затем попросите период и канал.")
 

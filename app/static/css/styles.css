@@ -602,7 +602,8 @@ p {
 .form textarea,
 .form input,
 .form select,
-.filter-bar select {
+.filter-bar select,
+.filter-bar input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -615,7 +616,8 @@ p {
 .form textarea:focus,
 .form input:focus,
 .form select:focus,
-.filter-bar select:focus {
+.filter-bar select:focus,
+.filter-bar input:focus {
   border-color: #b7a9e8;
   box-shadow: 0 0 0 4px rgba(217, 204, 255, 0.35);
   outline: none;
@@ -766,7 +768,7 @@ p {
 }
 
 .filter-bar--users {
-  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(260px, 1.4fr) auto;
 }
 
 .filter-notice {
@@ -803,11 +805,32 @@ p {
 }
 
 .data-table--clients {
-  min-width: 980px;
+  min-width: 0;
+  table-layout: fixed;
 }
 
-.data-table .col-login {
-  min-width: 240px;
+.data-table--clients .col-client {
+  width: 13%;
+}
+
+.data-table--clients .col-client-type {
+  width: 14%;
+}
+
+.data-table--clients .col-login {
+  width: 23%;
+}
+
+.data-table--clients .col-count {
+  width: 6%;
+}
+
+.data-table--clients .col-date {
+  width: 10%;
+}
+
+.data-table--clients .col-actions {
+  width: 18%;
 }
 
 .data-table th,
@@ -815,6 +838,7 @@ p {
   border-bottom: 1px solid var(--line);
   padding: 14px 10px;
   text-align: left;
+  vertical-align: middle;
 }
 
 .data-table th {
@@ -848,7 +872,7 @@ p {
 }
 
 .table-actions--row {
-  min-width: 190px;
+  min-width: 0;
   align-items: center;
 }
 
@@ -879,7 +903,7 @@ p {
 }
 
 .inline-form--autosave {
-  min-width: 190px;
+  min-width: 0;
 }
 
 .pastel-select {
@@ -890,6 +914,39 @@ p {
   font-weight: 750;
   min-height: 38px;
   padding: 8px 12px;
+}
+
+.pastel-search {
+  min-height: 48px;
+  background: linear-gradient(180deg, #fffdf9, #fbf8ff);
+}
+
+.data-table--clients .pastel-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.client-login-cell,
+.client-login-cell .table-note {
+  overflow-wrap: anywhere;
+}
+
+.manager-client-actions {
+  min-height: 78px;
+  align-content: center;
+  align-items: center;
+}
+
+.manager-client-actions .button {
+  flex: 1 1 96px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.manager-client-actions__placeholder {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
 }
 
 .info-banner {
