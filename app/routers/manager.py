@@ -10,7 +10,16 @@ from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
 from app.models import AdvertisingReport, Appeal, Category, ClientSession, Conversation, Message, MessageAttachment, User
 from app.services.feedback import manager_rating_summary
-from app.services.manager_workflow import finish_appeal_for_manager, group_manager_appeals, list_manager_clients, resolve_appeal_client_user
+from app.services.manager_workflow import (
+    finish_appeal_for_manager,
+    get_or_create_report_conversation,
+    get_report_conversation,
+    group_manager_appeals,
+    list_manager_clients,
+    mark_conversation_read,
+    resolve_appeal_client_user,
+    unread_messages_count,
+)
 from app.services.uploads import save_upload_file, validate_upload_filename
 
 templates = create_templates()
@@ -28,6 +37,7 @@ APPEAL_STATUSES = (
 )
 EMOTIONAL_TONES = ("neutral", "interested", "anxious", "disappointed", "irritated", "negative")
 PLACEHOLDER_MANAGER_EMAIL = "manager@example.local"
+CLIENT_TYPES = ("active_client", "potential_client")
 
 
 def redirect_to(path: str) -> RedirectResponse:
@@ -215,6 +225,9 @@ async def appeal_detail(request: Request, appeal_id: int, error: str = "") -> HT
                 "auth/access_denied.html",
                 {"page_title": "Доступ закрыт", "active_page": "manager"},
             )
+        if appeal:
+            mark_conversation_read(appeal.conversation, current_user.role)
+            db.commit()
         return templates.TemplateResponse(
             request,
             "manager/appeal_detail.html",
@@ -272,6 +285,7 @@ async def manager_clients(request: Request) -> HTMLResponse:
                 "page_title": "Клиенты",
                 "active_page": "manager-clients",
                 "clients": list_manager_clients(db),
+                "client_types": CLIENT_TYPES,
                 "db_error": None,
             },
         )
@@ -283,6 +297,7 @@ async def manager_clients(request: Request) -> HTMLResponse:
                 "page_title": "Клиенты",
                 "active_page": "manager-clients",
                 "clients": [],
+                "client_types": CLIENT_TYPES,
                 "db_error": database_error_message(error),
             },
         )
@@ -301,6 +316,45 @@ async def accept_appeal(request: Request, appeal_id: int) -> RedirectResponse:
         if appeal:
             appeal.assigned_manager_id = current_user.id
             appeal.status = "assigned_to_manager"
+            appeal.auto_reply_enabled = False
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to(f"/manager/appeals/{appeal_id}")
+
+
+@router.post("/clients/{client_id}/type")
+async def update_client_type(request: Request, client_id: int) -> RedirectResponse:
+    form = await read_form(request)
+    client_type = form.get("client_type", "")
+    if client_type not in CLIENT_TYPES:
+        return redirect_to("/manager/clients")
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        client = db.get(User, client_id)
+        if client and client.role == "client":
+            client.client_type = client_type
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to("/manager/clients")
+
+
+@router.post("/appeals/{appeal_id}/auto-reply")
+async def toggle_auto_reply(request: Request, appeal_id: int) -> RedirectResponse:
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        appeal = db.get(Appeal, appeal_id)
+        if appeal and (current_user.role == "admin" or appeal.assigned_manager_id in {None, current_user.id}):
+            appeal.auto_reply_enabled = not appeal.auto_reply_enabled
+            if not appeal.auto_reply_enabled and appeal.status != "closed":
+                appeal.status = "needs_manager"
             db.commit()
     finally:
         db.close()
@@ -413,14 +467,24 @@ async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResp
         client = resolve_appeal_client_user(db, appeal)
         if appeal is None or client is None:
             return redirect_to(f"/manager/appeals/{appeal_id}?error=Клиент обращения не найден")
+        if client.client_type != "active_client":
+            return redirect_to(f"/manager/appeals/{appeal_id}?error=Отчеты доступны только для действующих клиентов")
         if current_user.role == "manager" and appeal.assigned_manager_id not in {None, current_user.id}:
             return redirect_to(f"/manager/appeals/{appeal_id}?error=Обращение закреплено за другим менеджером")
         validate_upload_filename(file.filename)
         stored = await save_upload_file(file, "reports")
+        report_conversation = get_or_create_report_conversation(db, client)
+        message = Message(
+            conversation_id=report_conversation.id,
+            sender_type="manager",
+            content=f"Загружен рекламный отчет: {title}" + (f"\n{description}" if description else ""),
+        )
+        db.add(message)
         db.add(
             AdvertisingReport(
                 client_user_id=client.id,
                 appeal_id=appeal.id,
+                conversation_id=report_conversation.id,
                 uploaded_by_user_id=current_user.id,
                 title=title,
                 description=description or None,
@@ -438,3 +502,138 @@ async def upload_appeal_report(request: Request, appeal_id: int) -> RedirectResp
     finally:
         db.close()
     return redirect_to(f"/manager/appeals/{appeal_id}")
+
+
+@router.get("/clients/{client_id}/reports", response_class=HTMLResponse)
+async def manager_report_thread(request: Request, client_id: int, error: str = "") -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        client = db.get(User, client_id)
+        if client is None or client.role != "client" or client.client_type != "active_client":
+            return templates.TemplateResponse(
+                request,
+                "auth/access_denied.html",
+                {"page_title": "Доступ закрыт", "active_page": "manager-clients"},
+            )
+        conversation = get_or_create_report_conversation(db, client)
+        mark_conversation_read(conversation, current_user.role)
+        db.commit()
+        db.refresh(conversation)
+        return templates.TemplateResponse(
+            request,
+            "manager/report_thread.html",
+            {
+                "page_title": "Отчеты клиента",
+                "active_page": "manager-clients",
+                "client": client,
+                "conversation": get_report_conversation(db, client.id),
+                "reports": list(
+                    db.scalars(
+                        select(AdvertisingReport)
+                        .where(AdvertisingReport.client_user_id == client.id)
+                        .order_by(AdvertisingReport.created_at.desc())
+                    )
+                ),
+                "unread_count": unread_messages_count(conversation, current_user.role),
+                "error": error,
+            },
+        )
+    finally:
+        db.close()
+
+
+@router.post("/clients/{client_id}/reports/messages")
+async def send_manager_report_message(request: Request, client_id: int) -> RedirectResponse:
+    form = await request.form()
+    content = str(form.get("content", "")).strip()
+    if not content:
+        return redirect_to(f"/manager/clients/{client_id}/reports?error=Введите текст сообщения")
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        client = db.get(User, client_id)
+        if client is None or client.role != "client" or client.client_type != "active_client":
+            return redirect_to("/manager/clients")
+        conversation = get_or_create_report_conversation(db, client)
+        files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
+        for file in files:
+            validate_upload_filename(file.filename)
+        message = Message(conversation_id=conversation.id, sender_type="manager", content=content)
+        db.add(message)
+        db.flush()
+        for file in files:
+            stored = await save_upload_file(file, "messages")
+            db.add(
+                MessageAttachment(
+                    message_id=message.id,
+                    uploaded_by_user_id=current_user.id,
+                    original_filename=stored.original_filename,
+                    stored_filename=stored.stored_filename,
+                    stored_path=stored.stored_path,
+                    content_type=stored.content_type,
+                    size_bytes=stored.size_bytes,
+                )
+            )
+        db.commit()
+    except ValueError as error:
+        db.rollback()
+        return redirect_to(f"/manager/clients/{client_id}/reports?error={str(error)}")
+    finally:
+        db.close()
+    return redirect_to(f"/manager/clients/{client_id}/reports")
+
+
+@router.post("/clients/{client_id}/reports/upload")
+async def upload_client_report(request: Request, client_id: int) -> RedirectResponse:
+    form = await request.form()
+    title = str(form.get("title", "")).strip()
+    description = str(form.get("description", "")).strip()
+    file = form.get("report_file")
+    if not title or not hasattr(file, "filename") or not hasattr(file, "read") or not file.filename:
+        return redirect_to(f"/manager/clients/{client_id}/reports?error=Укажите название отчета и файл")
+    db = open_db()
+    try:
+        current_user = require_role(request, db, {"manager", "admin"})
+        if not hasattr(current_user, "id"):
+            return current_user
+        client = db.get(User, client_id)
+        if client is None or client.role != "client" or client.client_type != "active_client":
+            return redirect_to("/manager/clients")
+        validate_upload_filename(file.filename)
+        stored = await save_upload_file(file, "reports")
+        conversation = get_or_create_report_conversation(db, client)
+        db.add(
+            Message(
+                conversation_id=conversation.id,
+                sender_type="manager",
+                content=f"Загружен рекламный отчет: {title}" + (f"\n{description}" if description else ""),
+            )
+        )
+        db.add(
+            AdvertisingReport(
+                client_user_id=client.id,
+                conversation_id=conversation.id,
+                uploaded_by_user_id=current_user.id,
+                title=title,
+                description=description or None,
+                original_filename=stored.original_filename,
+                stored_filename=stored.stored_filename,
+                stored_path=stored.stored_path,
+                content_type=stored.content_type,
+                size_bytes=stored.size_bytes,
+            )
+        )
+        db.commit()
+    except ValueError as error:
+        db.rollback()
+        return redirect_to(f"/manager/clients/{client_id}/reports?error={str(error)}")
+    finally:
+        db.close()
+    return redirect_to(f"/manager/clients/{client_id}/reports")

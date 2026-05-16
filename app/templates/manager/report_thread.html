@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--mint">Менеджер</span>
+    <h1>Отчеты клиента</h1>
+    <p>Постоянный чат по отчетам для клиента №{{ client.id }}: {{ client.full_name }}.</p>
+  </section>
+
+  {% if error %}
+    <p class="form-hint form-hint--card">{{ error }}</p>
+  {% endif %}
+
+  <section class="appeal-layout">
+    <div class="card chat-window">
+      <div class="chat-header">
+        <div><strong>Чат по отчетам</strong><span>{{ conversation.title }}</span></div>
+        <span class="badge badge--blue">{{ client_type_label(client.client_type) }}</span>
+      </div>
+      <div class="chat-messages chat-messages--manager">
+        {% for message in conversation.messages %}
+          <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
+            <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+            {{ message.content }}
+            {% if message.attachments %}
+              <div class="attachment-list">
+                {% for attachment in message.attachments %}
+                  {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
+                    <a href="/chat/attachments/{{ attachment.id }}"><img src="/chat/attachments/{{ attachment.id }}" alt="{{ attachment.original_filename }}"></a>
+                  {% else %}
+                    <a class="attachment-link" href="/chat/attachments/{{ attachment.id }}">{{ attachment.original_filename }}</a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="chat-empty"><strong>Чат пуст</strong><span>Отправьте первый комментарий или загрузите отчет.</span></div>
+        {% endfor %}
+      </div>
+      <form class="form chat-form" method="post" action="/manager/clients/{{ client.id }}/reports/messages" enctype="multipart/form-data">
+        <label for="manager-report-message">Сообщение клиенту</label>
+        <textarea id="manager-report-message" name="content" rows="3" placeholder="Комментарий к отчету или ответ клиенту"></textarea>
+        <label class="file-field" for="manager-report-attachments">Прикрепить файлы</label>
+        <input id="manager-report-attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+        <button class="button button--primary" type="submit">Отправить</button>
+      </form>
+    </div>
+
+    <aside class="card side-panel">
+      <h2>Новый отчет</h2>
+      <form class="form action-form" method="post" action="/manager/clients/{{ client.id }}/reports/upload" enctype="multipart/form-data">
+        <label for="client-report-title">Название</label>
+        <input id="client-report-title" name="title" placeholder="Например: Отчет за май">
+        <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
+        <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+        <button class="button button--secondary" type="submit">Загрузить отчет</button>
+      </form>
+
+      <div class="mini-section">
+        <h3>Файлы отчетов</h3>
+        {% for report in reports %}
+          <p><strong>{{ report.title }}</strong><br><span>{{ report.created_at.strftime("%d.%m.%Y %H:%M") }} · {{ report.original_filename }}</span></p>
+        {% else %}
+          <p class="table-note">Отчеты пока не загружены.</p>
+        {% endfor %}
+      </div>
+    </aside>
+  </section>
+{% endblock %}

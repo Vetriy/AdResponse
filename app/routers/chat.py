@@ -192,7 +192,7 @@ def send_chat_message(request: Request, payload: ChatMessageCreate, db: Session 
     return ChatSendResponse(
         conversation_id=conversation.id,
         client_message=serialize_message(client_message),
-        system_message=serialize_message(system_message),
+        system_message=serialize_message(system_message) if system_message else None,
         category=appeal.request_category or "other",
         category_label=category_label(appeal.request_category),
         emotional_tone=appeal.emotional_tone or "neutral",
@@ -233,7 +233,8 @@ async def send_chat_message_with_uploads(request: Request, db: Session = Depends
         )
         await save_message_attachments(db, client_message, files, user.id)
         db.refresh(client_message)
-        db.refresh(system_message)
+        if system_message:
+            db.refresh(system_message)
     except HTTPException:
         raise
     except ValueError as error:
@@ -249,7 +250,7 @@ async def send_chat_message_with_uploads(request: Request, db: Session = Depends
     return ChatSendResponse(
         conversation_id=conversation.id,
         client_message=serialize_message(client_message),
-        system_message=serialize_message(system_message),
+        system_message=serialize_message(system_message) if system_message else None,
         category=appeal.request_category or "other",
         category_label=category_label(appeal.request_category),
         emotional_tone=appeal.emotional_tone or "neutral",

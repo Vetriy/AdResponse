@@ -80,6 +80,8 @@
           <strong>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</strong>
           <span>Создано</span>
           <strong>{{ appeal.created_at.strftime("%d.%m.%Y %H:%M") }}</strong>
+          <span>Автоответы</span>
+          <strong>{{ "включены" if appeal.auto_reply_enabled else "выключены" }}</strong>
         </div>
 
         <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/accept">
@@ -88,6 +90,11 @@
           {% if appeal.assigned_manager %}
             <p class="form-hint form-hint--neutral">Сейчас обращение принял: {{ appeal.assigned_manager.full_name }}.</p>
           {% endif %}
+        </form>
+
+        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/auto-reply">
+          <button class="button button--secondary" type="submit">{{ "Выключить автоответы" if appeal.auto_reply_enabled else "Включить автоответы" }}</button>
+          <p class="form-hint form-hint--neutral">Выключите автоответы, когда менеджер ведет обращение вручную.</p>
         </form>
 
         <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/status">
@@ -121,13 +128,17 @@
           </div>
         {% endif %}
 
-        <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/reports" enctype="multipart/form-data">
-          <label for="report-title">Загрузить отчет клиенту</label>
-          <input id="report-title" name="title" placeholder="Например: Отчет за апрель">
-          <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
-          <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-          <button class="button button--secondary" type="submit">Загрузить отчет</button>
-        </form>
+        {% set appeal_client = appeal.conversation.client_session.user %}
+        {% if appeal_client and appeal_client.client_type == "active_client" %}
+          <form class="form action-form" method="post" action="/manager/appeals/{{ appeal.id }}/reports" enctype="multipart/form-data">
+            <label for="report-title">Загрузить отчет клиенту</label>
+            <input id="report-title" name="title" placeholder="Например: Отчет за апрель">
+            <textarea name="description" rows="3" placeholder="Короткое описание отчета"></textarea>
+            <input name="report_file" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+            <button class="button button--secondary" type="submit">Загрузить отчет</button>
+            <p class="form-hint form-hint--neutral">Отчет попадет в единый чат отчетов клиента.</p>
+          </form>
+        {% endif %}
 
         {% if appeal.advertising_reports %}
           <div class="mini-section">

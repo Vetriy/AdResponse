@@ -810,6 +810,17 @@ p {
   padding: 0;
 }
 
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-form select {
+  min-width: 170px;
+}
+
 .empty-state {
   display: grid;
   gap: 8px;

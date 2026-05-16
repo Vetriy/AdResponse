@@ -255,7 +255,11 @@ if (chatWidget) {
       chatWidget.dataset.conversationId = String(result.conversation_id);
       loadingBubble.remove();
       appendMessage("client", result.client_message.content, result.client_message.attachments || [], "", result.client_message);
-      appendMessage("system", result.system_message.content, result.system_message.attachments || [], "", result.system_message);
+      if (result.system_message) {
+        appendMessage("system", result.system_message.content, result.system_message.attachments || [], "", result.system_message);
+      } else {
+        appendMessage("system", "Сообщение сохранено. Автоответы по этому обращению выключены, менеджер ответит вручную.", [], "chat-bubble--notice");
+      }
       updateAnalysis(result);
     } catch (error) {
       loadingBubble.remove();

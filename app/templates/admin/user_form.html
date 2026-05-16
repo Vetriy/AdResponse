@@ -17,6 +17,13 @@
       <input id="full_name" name="full_name" value="{{ user.full_name if user else '' }}" required>
       <label for="role">Роль</label>
       <select id="role" name="role">{% for role in roles %}<option value="{{ role }}" {% if user and user.role == role %}selected{% endif %}>{{ role_label(role) }}</option>{% endfor %}</select>
+      <label for="client_type">Тип клиента</label>
+      <select id="client_type" name="client_type">
+        {% for client_type in client_types %}
+          <option value="{{ client_type }}" {% if (user and user.client_type == client_type) or (not user and client_type == "potential_client") %}selected{% endif %}>{{ client_type_label(client_type) }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-hint form-hint--neutral">Тип используется только для клиентов: действующим клиентам доступен раздел отчетов.</p>
       {% if not user %}
         <label for="password">Пароль</label>
         <input id="password" name="password" type="password" required>

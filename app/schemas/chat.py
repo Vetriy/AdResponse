@@ -36,7 +36,7 @@ class ChatMessageRead(BaseModel):
 class ChatSendResponse(BaseModel):
     conversation_id: int
     client_message: ChatMessageRead
-    system_message: ChatMessageRead
+    system_message: ChatMessageRead | None = None
     category: str
     category_label: str
     emotional_tone: str

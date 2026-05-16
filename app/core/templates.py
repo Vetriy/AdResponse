@@ -5,6 +5,7 @@ from app.services.labels import (
     appeal_category_label,
     category_label,
     client_identifier,
+    client_type_label,
     sender_label,
     role_label,
     source_label,
@@ -12,7 +13,7 @@ from app.services.labels import (
     tone_label,
 )
 from app.services.feedback import DISLIKE_REASONS, dislike_reason_label
-from app.services.manager_workflow import assignment_badge_label, assignment_group, latest_client_activity
+from app.services.manager_workflow import assignment_badge_label, assignment_group, latest_client_activity, unread_messages_count
 from app.services.analytics import percent
 
 
@@ -26,6 +27,7 @@ def create_templates() -> Jinja2Templates:
         appeal_category_label=appeal_category_label,
         category_label=category_label,
         client_identifier=client_identifier,
+        client_type_label=client_type_label,
         sender_label=sender_label,
         role_label=role_label,
         source_label=source_label,
@@ -36,6 +38,7 @@ def create_templates() -> Jinja2Templates:
         dislike_reason_label=dislike_reason_label,
         dislike_reasons=DISLIKE_REASONS,
         latest_client_activity=latest_client_activity,
+        unread_messages_count=unread_messages_count,
         percent=percent,
     )
     return templates

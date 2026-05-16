@@ -12,7 +12,7 @@ from app.models import (
     User,
 )
 from app.services.classification import classify_request
-from app.services.knowledge_base import get_category_by_name, select_knowledge_items
+from app.services.knowledge_base import resolve_active_category, select_knowledge_items
 from app.services.response_generation import generate_chat_response
 from app.services.sentiment import analyze_sentiment
 
@@ -29,6 +29,7 @@ def create_conversation(db: Session, user: User | None = None) -> Conversation:
         client_session=client_session,
         title="Клиентский чат",
         status="open",
+        conversation_type="appeal",
     )
     db.add(conversation)
     db.commit()
@@ -54,7 +55,7 @@ def process_client_message(
     conversation_id: int | None = None,
     user: User | None = None,
     report_context: str | None = None,
-) -> tuple[Conversation, Message, Message, Appeal, list[str], bool]:
+) -> tuple[Conversation, Message, Message | None, Appeal, list[str], bool]:
     conversation = get_conversation(db, conversation_id) if conversation_id else None
     if conversation is None:
         conversation = create_conversation(db, user)
@@ -63,15 +64,7 @@ def process_client_message(
 
     classification = classify_request(content)
     sentiment = analyze_sentiment(content)
-    category = get_category_by_name(db, classification.category)
-    knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
-    generated = generate_chat_response(
-        content,
-        classification.category,
-        sentiment.emotional_tone,
-        knowledge_items,
-        report_context=report_context,
-    )
+    category, effective_category = resolve_active_category(db, classification.category)
 
     client_message = Message(
         conversation_id=conversation.id,
@@ -92,12 +85,29 @@ def process_client_message(
 
     appeal = conversation.appeal
     if appeal is None:
-        appeal = Appeal(conversation_id=conversation.id)
+        appeal = Appeal(conversation_id=conversation.id, auto_reply_enabled=True)
         db.add(appeal)
 
     appeal.category_id = category.id if category else None
-    appeal.request_category = classification.category
+    appeal.request_category = effective_category
     appeal.emotional_tone = sentiment.emotional_tone
+    if not appeal.auto_reply_enabled:
+        appeal.status = "needs_manager"
+        appeal.priority = "high"
+        db.commit()
+        db.refresh(client_message)
+        db.refresh(appeal)
+        db.refresh(conversation)
+        return conversation, client_message, None, appeal, [], True
+
+    knowledge_items = select_knowledge_items(db, category, sentiment.emotional_tone)
+    generated = generate_chat_response(
+        content,
+        effective_category,
+        sentiment.emotional_tone,
+        knowledge_items,
+        report_context=report_context,
+    )
     appeal.status = "needs_manager" if generated.handover_offered else "needs_clarification" if generated.clarifying_questions else "auto_answered"
     appeal.priority = "high" if generated.handover_offered else "normal"
 

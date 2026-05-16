@@ -172,14 +172,15 @@ Steps:
 3. In `Загрузить отчет клиенту`, enter title, description and upload a `.pdf` or `.xlsx`.
 4. Login as `client`.
 5. Open `/client/dashboard`.
-6. Open the report or click `Задать вопрос`.
+6. Open the single `Отчеты по рекламе` chat.
+7. Send a question about the report.
 
 Expected:
 
 - report appears in `Отчеты по рекламе`;
 - upload does not show `Клиент обращения не найден` for a registered client appeal;
 - client can download/open the report;
-- report question creates a new appeal with report title/description as context.
+- report question is saved in the same persistent report chat, not in a new report chat.
 
 ## 11. Admin adds prepared manager comment
 
@@ -202,6 +203,9 @@ Expected:
 - `Приоритет` is shown in its own clear area, and edit/delete buttons align consistently.
 - category toggle says `Выключить` for active categories and `Включить` for inactive categories;
 - after toggling, the page returns to the categories section.
+- prepared comment toggle says `Выключить` for active comments and `Включить` for inactive comments;
+- after toggling a prepared comment, the page returns to the comments section;
+- disabled categories and disabled comments are not used for new generated responses.
 
 ## 12. Manager finishes appeal and client rates manager
 
@@ -248,9 +252,12 @@ Steps:
 Expected:
 
 - all registered clients are visible;
+- client type is visible to manager/admin as `Действующий клиент` or `Потенциальный клиент`;
 - each row shows client identifier, name/login/email, total appeals, active appeals, last appeal date and last uploaded report date.
 - `К обращениям` opens `/manager/dashboard` filtered by that client;
 - the dashboard heading says `Обращения клиента: ...` and has `Все обращения`.
+- active clients have an `Отчеты` action that opens one persistent report chat;
+- potential clients do not have the report chat action.
 
 ## 15. Unusual question fallback
 
@@ -293,3 +300,48 @@ Expected:
 
 - user still receives a response;
 - `generated_responses.source = local_rules`.
+
+## 18. Client types and report visibility
+
+Steps:
+
+1. Login as `admin`.
+2. Open `/admin/users`.
+3. Edit a client and set type to `Потенциальный клиент`.
+4. Login as that client and open `/client/dashboard`.
+5. Change the type back to `Действующий клиент` and open the client dashboard again.
+
+Expected:
+
+- admin user table shows the client type and allows editing it;
+- potential client does not see `Отчеты по рекламе`;
+- active client sees `Отчеты по рекламе`.
+
+## 19. Manager disables automatic answers
+
+Steps:
+
+1. Login as `manager`.
+2. Open an appeal and click `Принять обращение`.
+3. Confirm `Автоответы: выключены`.
+4. Login as client and send a new message in the same appeal.
+
+Expected:
+
+- client message is saved;
+- no new automatic system response appears;
+- appeal status moves to manager attention.
+
+## 20. Unread indicators
+
+Steps:
+
+1. Client sends a message in an appeal or report chat.
+2. Login as manager and open `/manager/dashboard` or `/manager/clients`.
+3. Open the corresponding chat.
+4. Return to the list.
+
+Expected:
+
+- unread badge appears before opening;
+- after opening, the badge for that role disappears.

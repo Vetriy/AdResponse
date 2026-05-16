@@ -2,16 +2,20 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db.base import Base
-from app.models import Appeal, AppealFeedback, Category, ClientSession, Conversation, Message, User
+from app.models import Appeal, AppealFeedback, Category, ClientSession, Conversation, KnowledgeBaseItem, Message, User
 from app.services.analytics import build_admin_analytics, grouped_appeal_status, percent
 from app.services.feedback import manager_rating_rows, manager_rating_summary, normalize_ai_feedback, store_or_update_ai_feedback
+from app.services.labels import client_type_label
 from app.services.manager_workflow import (
     assignment_group,
     finish_appeal_for_manager,
+    get_or_create_report_conversation,
     group_manager_appeals,
+    mark_conversation_read,
     resolve_appeal_client,
+    unread_messages_count,
 )
-from app.routers.admin import form_bool, form_int, slugify
+from app.routers.admin import can_archive_user, form_bool, form_int, slugify
 from app.routers.manager import PLACEHOLDER_MANAGER_EMAIL, get_or_create_placeholder_manager
 
 
@@ -22,6 +26,8 @@ def test_admin_form_helpers_are_predictable() -> None:
     assert form_bool({}, "is_active") is False
     assert form_int({"priority": "15"}, "priority", 100) == 15
     assert form_int({"priority": "bad"}, "priority", 100) == 100
+    assert client_type_label("active_client") == "Действующий клиент"
+    assert client_type_label("potential_client") == "Потенциальный клиент"
 
 
 def test_placeholder_manager_is_created_once() -> None:
@@ -43,6 +49,49 @@ def test_report_upload_client_resolution_uses_appeal_session_user() -> None:
     appeal = Appeal(conversation=Conversation(client_session=ClientSession(user=user)))
 
     assert resolve_appeal_client(appeal) is user
+
+
+def test_report_thread_is_persistent_for_active_client_and_unread_counts_work() -> None:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        client = User(
+            username="client",
+            email="c@test.local",
+            full_name="Клиент",
+            role="client",
+            client_type="active_client",
+            hashed_password="x",
+        )
+        db.add(client)
+        db.flush()
+
+        first = get_or_create_report_conversation(db, client)
+        second = get_or_create_report_conversation(db, client)
+        db.add(Message(conversation=first, sender_type="manager", content="Отчет загружен"))
+        db.flush()
+
+        assert first.id == second.id
+        assert first.conversation_type == "report_thread"
+        assert unread_messages_count(first, "client") == 1
+
+        mark_conversation_read(first, "client")
+        db.flush()
+
+        assert unread_messages_count(first, "client") == 0
+
+
+def test_admin_can_archive_clients_and_managers_but_not_admins_or_self() -> None:
+    admin = User(id=1, username="admin", email="a@test.local", full_name="Admin", role="admin", hashed_password="x")
+    other_admin = User(id=2, username="admin2", email="a2@test.local", full_name="Admin 2", role="admin", hashed_password="x")
+    manager = User(id=3, username="manager", email="m@test.local", full_name="Manager", role="manager", hashed_password="x")
+    client = User(id=4, username="client", email="c@test.local", full_name="Client", role="client", hashed_password="x")
+
+    assert can_archive_user(client, admin) is True
+    assert can_archive_user(manager, admin) is True
+    assert can_archive_user(other_admin, admin) is False
+    assert can_archive_user(admin, admin) is False
 
 
 def test_finish_appeal_assigns_manager_and_closes() -> None:
@@ -162,6 +211,14 @@ def test_admin_analytics_groups_totals() -> None:
                 Appeal(status="closed", conversation=Conversation(client_session=ClientSession())),
             ]
         )
+        db.flush()
+        category = db.scalar(select(Category).where(Category.slug == "general"))
+        db.add_all(
+            [
+                KnowledgeBaseItem(category_id=category.id, title="Active", content="A", is_active=True),
+                KnowledgeBaseItem(category_id=category.id, title="Inactive", content="I", is_active=False),
+            ]
+        )
         db.commit()
 
         analytics = build_admin_analytics(db)
@@ -171,3 +228,5 @@ def test_admin_analytics_groups_totals() -> None:
     assert analytics["users"]["total"] == 2
     assert analytics["appeals"]["groups"]["new"] == 1
     assert analytics["appeals"]["groups"]["closed"] == 1
+    assert analytics["comments"]["active"] == 1
+    assert analytics["comments"]["inactive"] == 1

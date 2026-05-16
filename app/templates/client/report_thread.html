@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-title">
+    <span class="badge badge--blue">Клиент</span>
+    <h1>Отчеты по рекламе</h1>
+    <p>Единая переписка по рекламным отчетам, вопросам и уточнениям менеджера.</p>
+  </section>
+
+  {% if error %}
+    <p class="form-hint form-hint--card">{{ error }}</p>
+  {% endif %}
+
+  <section class="appeal-layout">
+    <div class="card chat-window">
+      <div class="chat-header">
+        <div><strong>Чат по отчетам</strong><span>{{ conversation.title }}</span></div>
+        <span class="badge badge--mint">постоянный чат</span>
+      </div>
+      <div class="chat-messages chat-messages--manager">
+        {% for message in conversation.messages %}
+          <div class="chat-bubble chat-bubble--{{ message.sender_type }}">
+            <small>{{ sender_label(message.sender_type) }} · {{ message.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+            {{ message.content }}
+            {% if message.attachments %}
+              <div class="attachment-list">
+                {% for attachment in message.attachments %}
+                  {% if attachment.original_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
+                    <a href="/chat/attachments/{{ attachment.id }}"><img src="/chat/attachments/{{ attachment.id }}" alt="{{ attachment.original_filename }}"></a>
+                  {% else %}
+                    <a class="attachment-link" href="/chat/attachments/{{ attachment.id }}">{{ attachment.original_filename }}</a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="chat-empty"><strong>Сообщений пока нет</strong><span>Когда менеджер загрузит отчет или напишет комментарий, он появится здесь.</span></div>
+        {% endfor %}
+      </div>
+      <form class="form chat-form" method="post" action="/client/reports/messages" enctype="multipart/form-data">
+        <label for="report-message">Сообщение менеджеру</label>
+        <textarea id="report-message" name="content" rows="3" placeholder="Напишите вопрос по отчету"></textarea>
+        <label class="file-field" for="report-attachments">Прикрепить файлы</label>
+        <input id="report-attachments" name="attachments" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+        <button class="button button--primary" type="submit">Отправить</button>
+      </form>
+    </div>
+
+    <aside class="card side-panel">
+      <h2>Файлы отчетов</h2>
+      {% for report in reports %}
+        <div class="mini-section">
+          <h3>{{ report.title }}</h3>
+          {% if report.description %}<p>{{ report.description }}</p>{% endif %}
+          <p class="table-note">{{ report.created_at.strftime("%d.%m.%Y %H:%M") }} · {{ report.original_filename }}</p>
+          <a class="button button--secondary button--small" href="/client/reports/{{ report.id }}">Открыть</a>
+        </div>
+      {% else %}
+        <p class="table-note">Отчеты пока не загружены.</p>
+      {% endfor %}
+    </aside>
+  </section>
+{% endblock %}

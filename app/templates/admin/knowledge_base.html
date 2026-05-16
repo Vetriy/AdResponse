@@ -14,46 +14,6 @@
     </section>
   {% else %}
     <section class="knowledge-layout knowledge-layout--stacked">
-      <div class="card knowledge-comments">
-        <div class="table-card__header">
-          <h2>Подготовленные комментарии</h2>
-          <a class="button button--primary" href="/admin/knowledge-base/items/new">Добавить</a>
-        </div>
-
-        {% if items %}
-          <div class="kb-card-list">
-            {% for item in items %}
-              <article class="kb-item-card">
-                <div class="kb-item-card__body">
-                  <div class="stack">
-                    <span class="badge badge--blue">{{ category_label(item.category.name) }}</span>
-                    <span class="badge tone-{{ item.emotional_tone }}">{{ tone_label(item.emotional_tone) }}</span>
-                    <span class="badge {{ 'badge--mint' if item.is_active else 'badge--peach' }}">{{ "активен" if item.is_active else "выключен" }}</span>
-                  </div>
-                  <h3>{{ item.title }}</h3>
-                  <p>{{ item.content }}</p>
-                </div>
-                <div class="kb-item-card__priority">
-                  <span>Приоритет</span>
-                  <strong>{{ item.priority }}</strong>
-                </div>
-                <div class="kb-item-card__actions">
-                  <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>
-                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete">
-                    <button class="button button--ghost button--small" type="submit">Удалить</button>
-                  </form>
-                </div>
-              </article>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state empty-state--compact">
-            <h2>Комментариев пока нет</h2>
-            <p>Добавьте первый подготовленный ответ менеджера для категории обращения.</p>
-          </div>
-        {% endif %}
-      </div>
-
       <aside class="card side-panel knowledge-categories" id="categories">
         <div class="table-card__header">
           <h2>Категории</h2>
@@ -83,6 +43,46 @@
           {% endfor %}
         </div>
       </aside>
+
+      <div class="card knowledge-comments" id="comments">
+        <div class="table-card__header">
+          <h2>Подготовленные комментарии</h2>
+          <a class="button button--primary" href="/admin/knowledge-base/items/new">Добавить</a>
+        </div>
+
+        {% if items %}
+          <div class="kb-card-list">
+            {% for item in items %}
+              <article class="kb-item-card">
+                <div class="kb-item-card__body">
+                  <div class="stack">
+                    <span class="badge badge--blue">{{ category_label(item.category.name) }}</span>
+                    <span class="badge tone-{{ item.emotional_tone }}">{{ tone_label(item.emotional_tone) }}</span>
+                    <span class="badge {{ 'badge--mint' if item.is_active else 'badge--peach' }}">{{ "активен" if item.is_active else "выключен" }}</span>
+                  </div>
+                  <h3>{{ item.title }}</h3>
+                  <p>{{ item.content }}</p>
+                </div>
+                <div class="kb-item-card__priority">
+                  <span>Приоритет</span>
+                  <strong>{{ item.priority }}</strong>
+                </div>
+                <div class="kb-item-card__actions">
+                  <a class="button button--secondary button--small" href="/admin/knowledge-base/items/{{ item.id }}/edit">Править</a>
+                  <form method="post" action="/admin/knowledge-base/items/{{ item.id }}/delete">
+                    <button class="button button--ghost button--small" type="submit">{{ "Выключить" if item.is_active else "Включить" }}</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state empty-state--compact">
+            <h2>Комментариев пока нет</h2>
+            <p>Добавьте первый подготовленный ответ менеджера для категории обращения.</p>
+          </div>
+        {% endif %}
+      </div>
     </section>
   {% endif %}
 {% endblock %}

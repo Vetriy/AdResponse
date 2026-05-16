@@ -114,9 +114,9 @@ COMMENTS = {
 }
 
 DEMO_USERS = [
-    ("admin", "admin@example.local", "Администратор", "admin", "admin123"),
-    ("manager", "manager@example.local", "Менеджер", "manager", "manager123"),
-    ("client", "client@example.local", "Клиент", "client", "client123"),
+    ("admin", "admin@example.local", "Администратор", "admin", "potential_client", "admin123"),
+    ("manager", "manager@example.local", "Менеджер", "manager", "potential_client", "manager123"),
+    ("client", "client@example.local", "Клиент", "client", "active_client", "client123"),
 ]
 
 
@@ -164,7 +164,7 @@ def upsert_comments(db: Session, categories: dict[str, Category]) -> None:
 
 
 def upsert_demo_users(db: Session) -> None:
-    for username, email, full_name, role, password in DEMO_USERS:
+    for username, email, full_name, role, client_type, password in DEMO_USERS:
         user = db.scalar(select(User).where((User.username == username) | (User.email == email)))
         if user is None:
             user = User(
@@ -172,6 +172,7 @@ def upsert_demo_users(db: Session) -> None:
                 email=email,
                 full_name=full_name,
                 role=role,
+                client_type=client_type,
                 hashed_password=hash_password(password),
                 is_active=True,
             )
@@ -181,6 +182,7 @@ def upsert_demo_users(db: Session) -> None:
             user.email = email
             user.full_name = full_name
             user.role = role
+            user.client_type = client_type
             user.is_active = True
             if not verify_password(password, user.hashed_password):
                 user.hashed_password = hash_password(password)

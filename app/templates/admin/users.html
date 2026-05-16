@@ -13,7 +13,7 @@
     </div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Логин</th><th>Email</th><th>Имя</th><th>Роль</th><th>Статус</th><th></th></tr></thead>
+        <thead><tr><th>Логин</th><th>Email</th><th>Имя</th><th>Роль</th><th>Тип клиента</th><th>Статус</th><th></th></tr></thead>
         <tbody>
           {% for user in users %}
             <tr>
@@ -21,12 +21,14 @@
               <td>{{ user.email }}</td>
               <td>{{ user.full_name }}</td>
               <td><span class="badge role-{{ user.role }}">{{ role_label(user.role) }}</span></td>
+              <td>{% if user.role == "client" %}<span class="badge badge--blue">{{ client_type_label(user.client_type) }}</span>{% else %}<span class="table-note">—</span>{% endif %}</td>
               <td><span class="badge {{ 'badge--mint' if user.is_active else 'badge--peach' }}">{{ "активен" if user.is_active else "выключен" }}</span></td>
               <td class="table-actions">
                 <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/edit">Править</a>
                 <a class="button button--secondary button--small" href="/admin/users/{{ user.id }}/reset-password">Пароль</a>
-                {% if user.role != "admin" %}
+                {% if user.role != "admin" and current_user and current_user.id != user.id %}
                   <form method="post" action="/admin/users/{{ user.id }}/toggle-active"><button class="button button--ghost button--small" type="submit">Вкл/выкл</button></form>
+                  <form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Удалить/архивировать пользователя? История обращений сохранится.');"><button class="button button--ghost button--small" type="submit">Удалить</button></form>
                 {% endif %}
               </td>
             </tr>

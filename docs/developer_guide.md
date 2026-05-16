@@ -117,3 +117,23 @@ Migration `20260516_0005_add_feedback_tables.py` adds:
 - `ai_response_feedback` for like/dislike on system answers and dislike reasons.
 
 Analytics are built in `app/services/analytics.py` and rendered with local HTML/CSS only. Manager workflow helpers live in `app/services/manager_workflow.py`; report upload resolves the client from the appeal conversation session instead of relying on a missing form field.
+
+## Business workflow stage
+
+Migration `20260516_0006_business_workflow_stage.py` adds:
+
+- `users.client_type`: `active_client` or `potential_client`;
+- `appeals.auto_reply_enabled`;
+- `conversations.conversation_type`: regular appeal chats use `appeal`, report chats use `report_thread`;
+- `conversations.client_last_read_at` and `manager_last_read_at` for simple unread indicators;
+- `advertising_reports.conversation_id` so reports can be attached to the persistent report chat.
+
+Important workflow rules:
+
+- Only admins/managers change client type. Templates do not show the internal client type to the client.
+- Only active clients see `/client/reports` and the `Отчеты по рекламе` dashboard section.
+- `get_or_create_report_conversation()` guarantees one persistent report thread per active client.
+- Accepting an appeal sets `auto_reply_enabled=false`; manager/admin can toggle it per appeal.
+- `resolve_active_category()` falls back to active `other` when the classifier result points to a disabled category.
+- `select_knowledge_items()` ignores inactive comments and comments from inactive categories.
+- User deletion in admin UI is safe archiving: clients/managers are deactivated, admins and the current user are protected.

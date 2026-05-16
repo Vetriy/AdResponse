@@ -3,7 +3,6 @@ from urllib.parse import parse_qs
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
 from app.core.auth import login_redirect, require_role
@@ -19,6 +18,7 @@ router = APIRouter(prefix="/admin", tags=["knowledge base"])
 
 EMOTIONAL_TONES = ("any", "neutral", "interested", "anxious", "disappointed", "irritated", "negative")
 USER_ROLES = ("client", "manager", "admin")
+CLIENT_TYPES = ("active_client", "potential_client")
 
 
 def redirect_to(path: str) -> RedirectResponse:
@@ -54,6 +54,10 @@ def ensure_admin(request: Request, db):
     return require_role(request, db, {"admin"})
 
 
+def can_archive_user(target: User | None, current_admin: User) -> bool:
+    return target is not None and target.role in {"client", "manager"} and target.id != current_admin.id
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request) -> HTMLResponse:
     if not request.session.get("user"):
@@ -68,6 +72,8 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
             "clients": db.scalar(select(func.count(User.id)).where(User.role == "client")) or 0,
             "managers": db.scalar(select(func.count(User.id)).where(User.role == "manager")) or 0,
             "admins": db.scalar(select(func.count(User.id)).where(User.role == "admin")) or 0,
+            "active_clients": db.scalar(select(func.count(User.id)).where(User.role == "client", User.client_type == "active_client")) or 0,
+            "potential_clients": db.scalar(select(func.count(User.id)).where(User.role == "client", User.client_type == "potential_client")) or 0,
             "appeals": db.scalar(select(func.count(Appeal.id))) or 0,
             "new_appeals": db.scalar(select(func.count(Appeal.id)).where(Appeal.status == "new")) or 0,
             "manager_attention": db.scalar(
@@ -77,6 +83,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
             "closed_appeals": db.scalar(select(func.count(Appeal.id)).where(Appeal.status == "closed")) or 0,
             "comments": db.scalar(select(func.count(KnowledgeBaseItem.id))) or 0,
             "active_comments": db.scalar(select(func.count(KnowledgeBaseItem.id)).where(KnowledgeBaseItem.is_active.is_(True))) or 0,
+            "inactive_comments": db.scalar(select(func.count(KnowledgeBaseItem.id)).where(KnowledgeBaseItem.is_active.is_(False))) or 0,
             "reports": db.scalar(select(func.count(AdvertisingReport.id))) or 0,
         }
         analytics = build_admin_analytics(db)
@@ -226,7 +233,7 @@ async def create_category(
         db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#categories")
 
 
 @router.get("/categories/{category_id}/edit", response_class=HTMLResponse)
@@ -293,7 +300,7 @@ async def update_category(
         db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#categories")
 
 
 @router.post("/categories/{category_id}/delete")
@@ -394,7 +401,7 @@ async def create_knowledge_item(
         db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#comments")
 
 
 @router.get("/knowledge-base/items/{item_id}/edit", response_class=HTMLResponse)
@@ -469,7 +476,7 @@ async def update_knowledge_item(
         db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#comments")
 
 
 @router.post("/knowledge-base/items/{item_id}/delete")
@@ -483,16 +490,11 @@ async def delete_knowledge_item(request: Request, item_id: int) -> RedirectRespo
             return admin
         item = db.get(KnowledgeBaseItem, item_id)
         if item:
-            try:
-                db.delete(item)
-                db.commit()
-            except SQLAlchemyError:
-                db.rollback()
-                item.is_active = False
-                db.commit()
+            item.is_active = not item.is_active
+            db.commit()
     finally:
         db.close()
-    return redirect_to("/admin/knowledge-base")
+    return redirect_to("/admin/knowledge-base#comments")
 
 
 @router.get("/users", response_class=HTMLResponse)
@@ -528,7 +530,15 @@ async def create_user_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "admin/user_form.html",
-        {"page_title": "Новый пользователь", "active_page": "users", "user": None, "roles": USER_ROLES, "error": "", "form_action": "/admin/users/create"},
+        {
+            "page_title": "Новый пользователь",
+            "active_page": "users",
+            "user": None,
+            "roles": USER_ROLES,
+            "client_types": CLIENT_TYPES,
+            "error": "",
+            "form_action": "/admin/users/create",
+        },
     )
 
 
@@ -541,10 +551,11 @@ async def create_user(request: Request):
     email = form.get("email", "").strip().lower()
     full_name = form.get("full_name", "").strip()
     role = form.get("role", "client")
+    client_type = form.get("client_type", "potential_client")
     password = form.get("password", "")
     is_active = form_bool(form, "is_active")
     error = ""
-    if not username or not email or not full_name or not password or role not in USER_ROLES:
+    if not username or not email or not full_name or not password or role not in USER_ROLES or client_type not in CLIENT_TYPES:
         error = "Заполните все поля и выберите корректную роль."
     elif len(password) < 6:
         error = "Пароль должен содержать минимум 6 символов."
@@ -563,13 +574,31 @@ async def create_user(request: Request):
                 {
                     "page_title": "Новый пользователь",
                     "active_page": "users",
-                    "user": {"username": username, "email": email, "full_name": full_name, "role": role, "is_active": is_active},
+                    "user": {
+                        "username": username,
+                        "email": email,
+                        "full_name": full_name,
+                        "role": role,
+                        "client_type": client_type,
+                        "is_active": is_active,
+                    },
                     "roles": USER_ROLES,
+                    "client_types": CLIENT_TYPES,
                     "error": error,
                     "form_action": "/admin/users/create",
                 },
             )
-        db.add(User(username=username, email=email, full_name=full_name, role=role, hashed_password=hash_password(password), is_active=is_active))
+        db.add(
+            User(
+                username=username,
+                email=email,
+                full_name=full_name,
+                role=role,
+                client_type=client_type if role == "client" else "potential_client",
+                hashed_password=hash_password(password),
+                is_active=is_active,
+            )
+        )
         db.commit()
         return redirect_to("/admin/users")
     finally:
@@ -589,7 +618,15 @@ async def edit_user_page(request: Request, user_id: int) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             "admin/user_form.html",
-            {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "" if user else "Пользователь не найден.", "form_action": f"/admin/users/{user_id}/edit"},
+            {
+                "page_title": "Редактировать пользователя",
+                "active_page": "users",
+                "user": user,
+                "roles": USER_ROLES,
+                "client_types": CLIENT_TYPES,
+                "error": "" if user else "Пользователь не найден.",
+                "form_action": f"/admin/users/{user_id}/edit",
+            },
         )
     finally:
         db.close()
@@ -610,24 +647,42 @@ async def edit_user(request: Request, user_id: int):
         email = form.get("email", "").strip().lower()
         full_name = form.get("full_name", "").strip()
         role = form.get("role", "client")
+        client_type = form.get("client_type", "potential_client")
         is_active = form_bool(form, "is_active")
-        if user is None or not username or not email or not full_name or role not in USER_ROLES:
+        if user is None or not username or not email or not full_name or role not in USER_ROLES or client_type not in CLIENT_TYPES:
             return templates.TemplateResponse(
                 request,
                 "admin/user_form.html",
-                {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "Проверьте поля пользователя.", "form_action": f"/admin/users/{user_id}/edit"},
+                {
+                    "page_title": "Редактировать пользователя",
+                    "active_page": "users",
+                    "user": user,
+                    "roles": USER_ROLES,
+                    "client_types": CLIENT_TYPES,
+                    "error": "Проверьте поля пользователя.",
+                    "form_action": f"/admin/users/{user_id}/edit",
+                },
             )
         duplicate = db.scalar(select(User).where(((User.username == username) | (User.email == email)), User.id != user_id))
         if duplicate:
             return templates.TemplateResponse(
                 request,
                 "admin/user_form.html",
-                {"page_title": "Редактировать пользователя", "active_page": "users", "user": user, "roles": USER_ROLES, "error": "Логин или email уже занят.", "form_action": f"/admin/users/{user_id}/edit"},
+                {
+                    "page_title": "Редактировать пользователя",
+                    "active_page": "users",
+                    "user": user,
+                    "roles": USER_ROLES,
+                    "client_types": CLIENT_TYPES,
+                    "error": "Логин или email уже занят.",
+                    "form_action": f"/admin/users/{user_id}/edit",
+                },
             )
         user.username = username
         user.email = email
         user.full_name = full_name
         user.role = role
+        user.client_type = client_type if role == "client" else "potential_client"
         user.is_active = is_active
         db.commit()
         return redirect_to("/admin/users")
@@ -689,8 +744,26 @@ async def toggle_user_active(request: Request, user_id: int):
         if not hasattr(admin, "id"):
             return admin
         user = db.get(User, user_id)
-        if user and user.role != "admin" and user.id != admin.id:
+        if can_archive_user(user, admin):
             user.is_active = not user.is_active
+            db.commit()
+    finally:
+        db.close()
+    return redirect_to("/admin/users")
+
+
+@router.post("/users/{user_id}/delete")
+async def delete_user(request: Request, user_id: int):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+        user = db.get(User, user_id)
+        if can_archive_user(user, admin):
+            user.is_active = False
             db.commit()
     finally:
         db.close()

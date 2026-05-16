@@ -8,8 +8,10 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import login_redirect, require_role
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
-from app.models import AdvertisingReport, Appeal, AppealFeedback, Conversation, Message
+from app.models import AdvertisingReport, Appeal, AppealFeedback, Conversation, Message, MessageAttachment
 from app.services.feedback import client_ai_feedback_map, client_feedback_for_appeal
+from app.services.manager_workflow import get_or_create_report_conversation, get_report_conversation, mark_conversation_read, unread_messages_count
+from app.services.uploads import save_upload_file, validate_upload_filename
 
 templates = create_templates()
 router = APIRouter(prefix="/client", tags=["client cabinet"])
@@ -50,12 +52,32 @@ async def client_dashboard(request: Request) -> HTMLResponse:
         user = require_role(request, db, {"client"})
         if not hasattr(user, "id"):
             return user
-        appeals = list(db.scalars(client_appeal_statement(user.id)))
-        reports = list(db.scalars(select(AdvertisingReport).where(AdvertisingReport.client_user_id == user.id).order_by(AdvertisingReport.created_at.desc())))
+        appeals = list(
+            db.scalars(
+                client_appeal_statement(user.id).options(
+                    selectinload(Appeal.conversation).selectinload(Conversation.messages)
+                )
+            )
+        )
+        is_active_client = user.client_type == "active_client"
+        reports = []
+        report_thread = None
+        if is_active_client:
+            reports = list(db.scalars(select(AdvertisingReport).where(AdvertisingReport.client_user_id == user.id).order_by(AdvertisingReport.created_at.desc())))
+            report_thread = get_report_conversation(db, user.id)
         return templates.TemplateResponse(
             request,
             "client/dashboard.html",
-            {"page_title": "Кабинет клиента", "active_page": "client", "appeals": appeals, "reports": reports, "db_error": None},
+            {
+                "page_title": "Кабинет клиента",
+                "active_page": "client",
+                "appeals": appeals,
+                "reports": reports,
+                "report_thread": report_thread,
+                "is_active_client": is_active_client,
+                "db_error": None,
+                "unread_messages_count": unread_messages_count,
+            },
         )
     finally:
         db.close()
@@ -92,6 +114,8 @@ async def client_appeal_detail(request: Request, appeal_id: int, feedback_error:
         if appeal:
             ai_feedback = client_ai_feedback_map(db, user.id, [message.id for message in appeal.conversation.messages if message.sender_type == "system"])
             appeal_feedback = client_feedback_for_appeal(db, appeal.id, user.id)
+            mark_conversation_read(appeal.conversation, "client")
+            db.commit()
         return templates.TemplateResponse(
             request,
             "client/appeal_detail.html",
@@ -156,6 +180,89 @@ async def submit_appeal_feedback(request: Request, appeal_id: int) -> RedirectRe
 @router.get("/chat")
 async def client_chat() -> RedirectResponse:
     return redirect_to("/chat/")
+
+
+@router.get("/reports", response_class=HTMLResponse)
+async def client_report_thread(request: Request, error: str = "") -> HTMLResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        user = require_role(request, db, {"client"})
+        if not hasattr(user, "id"):
+            return user
+        if user.client_type != "active_client":
+            return templates.TemplateResponse(
+                request,
+                "auth/access_denied.html",
+                {"page_title": "Доступ закрыт", "active_page": "client"},
+            )
+        conversation = get_or_create_report_conversation(db, user)
+        mark_conversation_read(conversation, "client")
+        db.commit()
+        return templates.TemplateResponse(
+            request,
+            "client/report_thread.html",
+            {
+                "page_title": "Отчеты по рекламе",
+                "active_page": "client",
+                "conversation": get_report_conversation(db, user.id),
+                "reports": list(
+                    db.scalars(
+                        select(AdvertisingReport)
+                        .where(AdvertisingReport.client_user_id == user.id)
+                        .order_by(AdvertisingReport.created_at.desc())
+                    )
+                ),
+                "error": error,
+            },
+        )
+    finally:
+        db.close()
+
+
+@router.post("/reports/messages")
+async def send_client_report_message(request: Request) -> RedirectResponse:
+    if not request.session.get("user"):
+        return login_redirect(request)
+    form = await request.form()
+    content = str(form.get("content", "")).strip()
+    if not content:
+        return redirect_to("/client/reports?error=Введите текст сообщения")
+    db = open_db()
+    try:
+        user = require_role(request, db, {"client"})
+        if not hasattr(user, "id"):
+            return user
+        if user.client_type != "active_client":
+            return redirect_to("/client/dashboard")
+        conversation = get_or_create_report_conversation(db, user)
+        files = [file for file in form.getlist("attachments") if hasattr(file, "filename") and hasattr(file, "read") and file.filename]
+        for file in files:
+            validate_upload_filename(file.filename)
+        message = Message(conversation_id=conversation.id, sender_type="client", content=content)
+        db.add(message)
+        db.flush()
+        for file in files:
+            stored = await save_upload_file(file, "messages")
+            db.add(
+                MessageAttachment(
+                    message_id=message.id,
+                    uploaded_by_user_id=user.id,
+                    original_filename=stored.original_filename,
+                    stored_filename=stored.stored_filename,
+                    stored_path=stored.stored_path,
+                    content_type=stored.content_type,
+                    size_bytes=stored.size_bytes,
+                )
+            )
+        db.commit()
+    except ValueError as upload_error:
+        db.rollback()
+        return redirect_to(f"/client/reports?error={str(upload_error)}")
+    finally:
+        db.close()
+    return redirect_to("/client/reports")
 
 
 @router.get("/reports/{report_id}")

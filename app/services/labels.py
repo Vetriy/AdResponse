@@ -51,6 +51,11 @@ ROLE_LABELS = {
     "client": "Клиент",
 }
 
+CLIENT_TYPE_LABELS = {
+    "active_client": "Действующий клиент",
+    "potential_client": "Потенциальный клиент",
+}
+
 SOURCE_LABELS = {
     "local_rules": "Автоматический ответ",
     "local_llama_cpp": "Локальная языковая модель",
@@ -76,6 +81,10 @@ def sender_label(value: str | None) -> str:
 
 def role_label(value: str | None) -> str:
     return ROLE_LABELS.get(value or "", value or "Роль не указана")
+
+
+def client_type_label(value: str | None) -> str:
+    return CLIENT_TYPE_LABELS.get(value or "", "Потенциальный клиент")
 
 
 def source_label(value: str | None) -> str:

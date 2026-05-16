@@ -97,7 +97,7 @@
                   <article class="appeal-row-card appeal-row-card--{{ group_key }}">
                     <div>
                       <span class="badge assignment-{{ group_key }}">{{ assignment_badge_label(group_key) }}</span>
-                      <h3>Обращение №{{ appeal.id }}</h3>
+                      <h3>Обращение №{{ appeal.id }}{% if unread_messages_count(appeal.conversation, current_user.role) %} <span class="badge badge--peach">Новое: {{ unread_messages_count(appeal.conversation, current_user.role) }}</span>{% endif %}</h3>
                       <p>{{ client_identifier(appeal) }} · {{ appeal_category_label(appeal) }}</p>
                     </div>
                     <div class="appeal-row-card__meta">

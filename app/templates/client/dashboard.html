@@ -9,26 +9,23 @@
   {% if db_error %}
     <section class="empty-state card"><h2>База данных недоступна</h2><p>{{ db_error }}</p></section>
   {% else %}
-    {% if reports %}
+    {% if is_active_client %}
       <section class="card table-card">
         <div class="table-card__header">
           <h2>Отчеты по рекламе</h2>
           <span class="badge badge--blue">{{ reports|length }}</span>
         </div>
-        <div class="report-list">
-          {% for report in reports %}
-            <article class="report-card">
-              <div>
-                <strong>{{ report.title }}</strong>
-                {% if report.description %}<p>{{ report.description }}</p>{% endif %}
-                <span>{{ report.created_at.strftime("%d.%m.%Y %H:%M") }} · {{ report.original_filename }}</span>
-              </div>
-              <div class="table-actions">
-                <a class="button button--secondary button--small" href="/client/reports/{{ report.id }}">Открыть</a>
-                <a class="button button--primary button--small" href="/chat/?report_id={{ report.id }}">Задать вопрос</a>
-              </div>
-            </article>
-          {% endfor %}
+        <div class="report-card">
+          <div>
+            <strong>Отчеты по компании</strong>
+            <p>Единая переписка по рекламным отчетам и вопросам к менеджеру.</p>
+            {% if report_thread and unread_messages_count(report_thread, "client") %}
+              <span class="badge badge--peach">Новое: {{ unread_messages_count(report_thread, "client") }}</span>
+            {% endif %}
+          </div>
+          <div class="table-actions">
+            <a class="button button--primary button--small" href="/client/reports">Открыть чат</a>
+          </div>
         </div>
       </section>
     {% endif %}
@@ -44,7 +41,7 @@
             <tbody>
               {% for appeal in appeals %}
                 <tr>
-                  <td>№{{ appeal.id }}</td>
+                  <td>№{{ appeal.id }}{% if unread_messages_count(appeal.conversation, "client") %}<br><span class="badge badge--peach">Новое: {{ unread_messages_count(appeal.conversation, "client") }}</span>{% endif %}</td>
                   <td>{{ appeal_category_label(appeal) }}</td>
                   <td><span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span></td>
                   <td><span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span></td>

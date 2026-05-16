@@ -8,8 +8,12 @@
   </section>
   <section class="dashboard-grid dashboard-grid--wide">
     <article class="metric-card card"><span>Всего пользователей</span><strong>{{ analytics.users.total }}</strong></article>
+    <article class="metric-card card"><span>Действующие клиенты</span><strong>{{ stats.active_clients }}</strong></article>
+    <article class="metric-card card"><span>Потенциальные клиенты</span><strong>{{ stats.potential_clients }}</strong></article>
     <article class="metric-card card"><span>Всего обращений</span><strong>{{ analytics.appeals.total }}</strong></article>
     <article class="metric-card card"><span>Всего подготовленных комментариев</span><strong>{{ analytics.comments.total }}</strong></article>
+    <article class="metric-card card"><span>Активные комментарии</span><strong>{{ stats.active_comments }}</strong></article>
+    <article class="metric-card card"><span>Выключенные комментарии</span><strong>{{ stats.inactive_comments }}</strong></article>
     <article class="metric-card card"><span>Загруженные отчеты</span><strong>{{ stats.reports }}</strong></article>
   </section>
 
