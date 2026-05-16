@@ -45,9 +45,9 @@
                   </td>
                   <td class="client-type-cell">
                     <form class="inline-form inline-form--autosave" method="post" action="/manager/clients/{{ row.client.id }}/type">
-                      <select class="pastel-select" name="client_type" aria-label="Тип клиента" data-autosubmit>
+                      <select class="pastel-select pastel-select--compact" name="client_type" aria-label="Тип клиента" title="{{ client_type_label(row.client.client_type) }}" data-autosubmit>
                         {% for client_type in client_types %}
-                          <option value="{{ client_type }}" {% if row.client.client_type == client_type %}selected{% endif %}>{{ client_type_label(client_type) }}</option>
+                          <option value="{{ client_type }}" title="{{ client_type_label(client_type) }}" {% if row.client.client_type == client_type %}selected{% endif %}>{{ compact_client_type_label(client_type) }}</option>
                         {% endfor %}
                       </select>
                     </form>

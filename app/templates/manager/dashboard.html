@@ -97,6 +97,7 @@
               <div class="appeal-card-list">
                 {% for appeal in appeal_groups[group_key] %}
                   {% set actionable_unread = actionable_manager_unread_count(appeal, current_user.id if current_user.role == "manager" else none, current_user.role) %}
+                  {% set display_tone = current_appeal_tone(appeal) %}
                   <article class="appeal-row-card appeal-row-card--{{ group_key }}">
                     <div>
                       <span class="badge assignment-{{ group_key }}">{{ assignment_badge_label(group_key) }}</span>
@@ -104,8 +105,8 @@
                       <p>{{ client_identifier(appeal) }} · {{ appeal_category_label(appeal) }}</p>
                     </div>
                     <div class="appeal-row-card__meta">
-                      <span>Текущий тон клиента: {{ tone_label(appeal.emotional_tone) }}</span>
-                      <span class="badge tone-{{ appeal.emotional_tone or 'neutral' }}">{{ tone_label(appeal.emotional_tone) }}</span>
+                      <span>Эмоциональный тон: {{ tone_label(display_tone) }}</span>
+                      <span class="badge tone-{{ display_tone }}">{{ tone_label(display_tone) }}</span>
                       <span class="badge status-{{ appeal.status }}">{{ status_label(appeal.status) }}</span>
                       <span>Активность: {{ latest_client_activity(appeal).strftime("%d.%m.%Y %H:%M") }}</span>
                       <span>{{ appeal.assigned_manager.full_name if appeal.assigned_manager else "не назначен" }}</span>

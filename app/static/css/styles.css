@@ -956,6 +956,11 @@ p {
   padding-inline: 8px;
 }
 
+.data-table--clients .pastel-select--compact {
+  text-align: center;
+  text-align-last: center;
+}
+
 .client-name-cell,
 .client-login-cell,
 .client-login-cell .table-note {

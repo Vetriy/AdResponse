@@ -56,6 +56,8 @@ def test_manager_clients_template_limits_report_action_to_active_clients() -> No
     assert "data-table--clients" in text
     assert "Действия" in text
     assert "manager-client-actions" in text
+    assert "compact_client_type_label" in text
+    assert "client_type_label(row.client.client_type)" in text
 
 
 def test_admin_users_search_uses_pastel_placeholder() -> None:
@@ -82,6 +84,8 @@ def test_manager_templates_show_tone_summary_only_outside_client_views() -> None
     manager_detail = Path("app/templates/manager/appeal_detail.html").read_text()
     client_detail = Path("app/templates/client/appeal_detail.html").read_text()
 
-    assert "Текущий тон клиента" in manager_dashboard
-    assert "Текущий тон клиента" in manager_detail
+    assert "Эмоциональный тон" in manager_dashboard
+    assert "Эмоциональный тон" in manager_detail
+    assert "Текущий тон клиента" not in manager_dashboard
+    assert "Текущий тон клиента" not in manager_detail
     assert "Текущий тон клиента" not in client_detail

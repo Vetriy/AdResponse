@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from app.models import Appeal, Conversation, Message
 from app.models.generated_response import GeneratedResponse
+from app.services.sentiment import analyze_sentiment
 
 
 STATUS_LABELS = {
@@ -57,6 +58,11 @@ ROLE_LABELS = {
 CLIENT_TYPE_LABELS = {
     "active_client": "Действующий клиент",
     "potential_client": "Потенциальный клиент",
+}
+
+CLIENT_TYPE_COMPACT_LABELS = {
+    "active_client": "Действ.",
+    "potential_client": "Пот.",
 }
 
 SOURCE_LABELS = {
@@ -127,6 +133,10 @@ def client_type_label(value: str | None) -> str:
     return CLIENT_TYPE_LABELS.get(value or "", "Потенциальный клиент")
 
 
+def compact_client_type_label(value: str | None) -> str:
+    return CLIENT_TYPE_COMPACT_LABELS.get(value or "", "Пот.")
+
+
 def source_label(value: str | None) -> str:
     return SOURCE_LABELS.get(value or "", value or "Автоматический ответ")
 
@@ -143,6 +153,19 @@ def appeal_category_label(appeal: Appeal | None) -> str:
     if appeal.category and appeal.category.name:
         return category_label(appeal.category.name)
     return category_label(appeal.request_category)
+
+
+def current_appeal_tone(appeal: Appeal | None) -> str:
+    if appeal is None or appeal.conversation is None:
+        return "neutral"
+    client_parts = [
+        message.content
+        for message in appeal.conversation.messages
+        if message.sender_type == "client" and message.content
+    ]
+    if not client_parts:
+        return appeal.emotional_tone or "neutral"
+    return analyze_sentiment("\n".join(client_parts)).emotional_tone
 
 
 def client_identifier(appeal: Appeal | None) -> str:

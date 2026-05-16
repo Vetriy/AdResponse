@@ -81,13 +81,12 @@
 
       <aside class="card side-panel">
         <h2>Сводка</h2>
+        {% set display_tone = current_appeal_tone(appeal) %}
         <div class="detail-list">
           <span>Категория</span>
           <strong>{{ appeal_category_label(appeal) }}</strong>
           <span>Эмоциональный тон</span>
-          <strong>{{ tone_label(appeal.emotional_tone) }}</strong>
-          <span>Текущий тон клиента</span>
-          <strong>{{ tone_label(appeal.emotional_tone) }}</strong>
+          <strong>{{ tone_label(display_tone) }}</strong>
           <span>Клиент</span>
           <strong>{{ client_identifier(appeal) }}</strong>
           <span>Менеджер</span>
