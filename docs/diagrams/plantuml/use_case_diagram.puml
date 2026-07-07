@@ -1,0 +1,171 @@
+@startuml
+title Диаграмма прецедентов интерактивного онлайн-сервиса
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam usecase {
+  BackgroundColor #F8F3FF
+  BorderColor #8B7BB7
+}
+skinparam actor {
+  BackgroundColor #E9F7F2
+  BorderColor #5D8F7B
+}
+
+actor "Клиент" as Client
+actor "Менеджер" as Manager
+actor "Администратор" as Admin
+actor "Онлайн-помощник" as Assistant
+
+rectangle "Интерактивный онлайн-сервис рекламного агентства" {
+  rectangle "Работа с учетной записью" {
+    usecase "Войти в систему" as UC_Login
+    usecase "Выйти из системы" as UC_Logout
+    usecase "Создать клиентский\nаккаунт" as UC_Register
+  }
+
+  rectangle "Обращения клиента" {
+    usecase "Создать обращение" as UC_CreateAppeal
+    usecase "Продолжить диалог\nпо обращению" as UC_ContinueAppeal
+    usecase "Просмотреть историю\nобращения" as UC_ViewAppeal
+    usecase "Прикрепить файл\nк сообщению" as UC_AttachFile
+    usecase "Получить\nавтоматический ответ" as UC_GetAutoReply
+  }
+
+  rectangle "Автоматическая обработка" {
+    usecase "Сохранить сообщение\nи контекст диалога" as UC_SaveContext
+    usecase "Определить категорию\nобращения" as UC_Classify
+    usecase "Определить\nэмоциональный тон" as UC_Tone
+    usecase "Подобрать материалы\nиз базы знаний" as UC_SelectKnowledge
+    usecase "Сформировать\nпервичный ответ" as UC_GenerateReply
+    usecase "Использовать локальную\nязыковую модель" as UC_LocalModel
+    usecase "Использовать\nрезервные правила" as UC_Rules
+    usecase "Рекомендовать передачу\nменеджеру" as UC_RecommendHandover
+  }
+
+  rectangle "Работа менеджера" {
+    usecase "Просмотреть обращения" as UC_ViewAppeals
+    usecase "Отфильтровать обращения" as UC_FilterAppeals
+    usecase "Открыть историю диалога" as UC_OpenAppeal
+    usecase "Принять обращение\nв работу" as UC_AcceptAppeal
+    usecase "Управлять автоответами\nобращения" as UC_ToggleAutoReply
+    usecase "Отправить ручной ответ" as UC_SendManualReply
+    usecase "Изменить статус\nобращения" as UC_UpdateStatus
+    usecase "Завершить обращение" as UC_CloseAppeal
+    usecase "Просмотреть клиентов" as UC_ViewClients
+    usecase "Изменить тип клиента" as UC_ChangeClientType
+  }
+
+  rectangle "Рекламные отчеты" {
+    usecase "Загрузить рекламный\nотчет" as UC_UploadReport
+    usecase "Просмотреть отчеты\nпо рекламе" as UC_ViewReports
+    usecase "Открыть чат\nпо отчетам" as UC_OpenReportChat
+    usecase "Задать вопрос\nпо отчету" as UC_AskReportQuestion
+    usecase "Скачать отчет" as UC_DownloadReport
+    usecase "Управлять автоответами\nчата по отчетам" as UC_ToggleReportReplies
+  }
+
+  rectangle "Администрирование" {
+    usecase "Управлять\nпользователями" as UC_ManageUsers
+    usecase "Управлять категориями\nобращений" as UC_ManageCategories
+    usecase "Управлять базой\nзнаний" as UC_ManageKnowledge
+    usecase "Искать подготовленные\nкомментарии" as UC_SearchKnowledge
+    usecase "Просмотреть обращения\nи чаты по отчетам" as UC_AdminAppeals
+  }
+
+  rectangle "Аналитика и обратная связь" {
+    usecase "Оценить автоответ" as UC_RateAutoReply
+    usecase "Оценить работу\nменеджера" as UC_RateManager
+    usecase "Просмотреть аналитику\nсервиса" as UC_ViewAnalytics
+    usecase "Просмотреть рейтинги\nменеджеров" as UC_ViewManagerRatings
+  }
+}
+
+Client -- UC_Login
+Client -- UC_Logout
+Client -- UC_Register
+Client -- UC_CreateAppeal
+Client -- UC_ContinueAppeal
+Client -- UC_ViewAppeal
+Client -- UC_AttachFile
+Client -- UC_GetAutoReply
+Client -- UC_ViewReports
+Client -- UC_OpenReportChat
+Client -- UC_AskReportQuestion
+Client -- UC_DownloadReport
+Client -- UC_RateAutoReply
+Client -- UC_RateManager
+
+Manager -- UC_Login
+Manager -- UC_Logout
+Manager -- UC_ViewAppeals
+Manager -- UC_FilterAppeals
+Manager -- UC_OpenAppeal
+Manager -- UC_AcceptAppeal
+Manager -- UC_ToggleAutoReply
+Manager -- UC_SendManualReply
+Manager -- UC_UpdateStatus
+Manager -- UC_CloseAppeal
+Manager -- UC_ViewClients
+Manager -- UC_ChangeClientType
+Manager -- UC_UploadReport
+Manager -- UC_OpenReportChat
+Manager -- UC_ToggleReportReplies
+
+Admin -- UC_Login
+Admin -- UC_Logout
+Admin -- UC_ManageUsers
+Admin -- UC_ManageCategories
+Admin -- UC_ManageKnowledge
+Admin -- UC_SearchKnowledge
+Admin -- UC_AdminAppeals
+Admin -- UC_ViewAnalytics
+Admin -- UC_ViewManagerRatings
+Admin -- UC_ViewAppeals
+Admin -- UC_OpenAppeal
+Admin -- UC_OpenReportChat
+
+Assistant -- UC_Classify
+Assistant -- UC_Tone
+Assistant -- UC_SelectKnowledge
+Assistant -- UC_GenerateReply
+Assistant -- UC_RecommendHandover
+
+UC_CreateAppeal ..> UC_SaveContext : <<include>>
+UC_ContinueAppeal ..> UC_SaveContext : <<include>>
+UC_AskReportQuestion ..> UC_SaveContext : <<include>>
+UC_GetAutoReply ..> UC_Classify : <<include>>
+UC_GetAutoReply ..> UC_Tone : <<include>>
+UC_GetAutoReply ..> UC_SelectKnowledge : <<include>>
+UC_GetAutoReply ..> UC_GenerateReply : <<include>>
+UC_GenerateReply ..> UC_LocalModel : <<extend>>
+UC_GenerateReply ..> UC_Rules : <<extend>>
+UC_GenerateReply ..> UC_RecommendHandover : <<extend>>
+UC_AcceptAppeal ..> UC_ToggleAutoReply : <<include>>
+UC_SendManualReply ..> UC_UpdateStatus : <<include>>
+UC_CloseAppeal ..> UC_RateManager : <<extend>>
+UC_UploadReport ..> UC_OpenReportChat : <<include>>
+UC_AskReportQuestion ..> UC_GetAutoReply : <<extend>>
+UC_ManageKnowledge ..> UC_SelectKnowledge : <<include>>
+UC_ViewAnalytics ..> UC_RateAutoReply : <<include>>
+UC_ViewManagerRatings ..> UC_RateManager : <<include>>
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

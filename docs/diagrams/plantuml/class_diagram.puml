@@ -1,0 +1,400 @@
+@startuml
+title Диаграмма классов интерактивного онлайн-сервиса
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #F8F3FF
+  BorderColor #8B7BB7
+}
+skinparam note {
+  BackgroundColor #FFF7E8
+  BorderColor #D8A45F
+}
+
+' Сервисные файлы в app/services и app/core реализованы преимущественно функциями.
+' Для читаемости они представлены как классы со стереотипом <<module>>.
+
+package "Доменные модели: app/models" {
+  class User {
+    +id : int
+    +username : str
+    +email : str
+    +full_name : str
+    +role : str
+    +client_type : str
+    +hashed_password : str
+    +is_active : bool
+  }
+
+  class ClientSession {
+    +id : int
+    +user_id : int
+    +client_name : str
+    +client_contact : str
+    +source : str
+    +status : str
+  }
+
+  class Conversation {
+    +id : int
+    +client_session_id : int
+    +title : str
+    +summary : str
+    +status : str
+    +conversation_type : str
+    +auto_reply_enabled : bool
+    +client_last_read_at : datetime
+    +manager_last_read_at : datetime
+  }
+
+  class Message {
+    +id : int
+    +conversation_id : int
+    +sender_type : str
+    +sender_display_name : str
+    +content : str
+  }
+
+  class MessageAttachment {
+    +id : int
+    +message_id : int
+    +uploaded_by_user_id : int
+    +original_filename : str
+    +stored_filename : str
+    +stored_path : str
+    +content_type : str
+    +size_bytes : int
+  }
+
+  class Appeal {
+    +id : int
+    +conversation_id : int
+    +category_id : int
+    +assigned_manager_id : int
+    +status : str
+    +emotional_tone : str
+    +request_category : str
+    +priority : str
+    +auto_reply_enabled : bool
+    +notes : str
+  }
+
+  class Category {
+    +id : int
+    +slug : str
+    +name : str
+    +description : str
+    +is_active : bool
+  }
+
+  class KnowledgeBaseItem {
+    +id : int
+    +category_id : int
+    +emotional_tone : str
+    +title : str
+    +content : str
+    +is_active : bool
+    +priority : int
+  }
+
+  class SentimentAnalysis {
+    +id : int
+    +message_id : int
+    +emotional_tone : str
+    +confidence : float
+    +explanation : str
+  }
+
+  class GeneratedResponse {
+    +id : int
+    +appeal_id : int
+    +response_text : str
+    +source : str
+    +confidence : float
+    +status : str
+  }
+
+  class HandoverRequest {
+    +id : int
+    +appeal_id : int
+    +reason : str
+    +status : str
+  }
+
+  class AdvertisingReport {
+    +id : int
+    +client_user_id : int
+    +appeal_id : int
+    +conversation_id : int
+    +uploaded_by_user_id : int
+    +title : str
+    +description : str
+    +original_filename : str
+    +stored_path : str
+    +size_bytes : int
+  }
+
+  class AppealFeedback {
+    +id : int
+    +appeal_id : int
+    +client_user_id : int
+    +manager_user_id : int
+    +rating : int
+    +comment : str
+  }
+
+  class AiResponseFeedback {
+    +id : int
+    +message_id : int
+    +appeal_id : int
+    +client_user_id : int
+    +value : str
+    +reason : str
+    +custom_reason : str
+  }
+}
+
+User "1" --> "0..*" ClientSession : "сессии"
+ClientSession "1" --> "0..*" Conversation : "диалоги"
+Conversation "1" --> "0..*" Message : "сообщения"
+Conversation "1" --> "0..1" Appeal : "обращение"
+Message "1" --> "0..1" SentimentAnalysis : "тон"
+Message "1" --> "0..*" MessageAttachment : "вложения"
+Category "1" --> "0..*" KnowledgeBaseItem : "комментарии"
+Category "1" --> "0..*" Appeal : "категория"
+User "1" --> "0..*" Appeal : "менеджер"
+Appeal "1" --> "0..*" GeneratedResponse : "автоответы"
+Appeal "1" --> "0..*" HandoverRequest : "передачи"
+User "1" --> "0..*" AdvertisingReport : "клиент или загрузивший"
+Conversation "1" --> "0..*" AdvertisingReport : "отчеты"
+Appeal "1" --> "0..*" AppealFeedback : "оценки"
+Message "1" --> "0..*" AiResponseFeedback : "оценки автоответов"
+
+package "Сервисы: app/services" {
+  class "app.services.chat_workflow" as ChatWorkflow <<module>> {
+    +report_context_for_linked_appeal(appeal)
+    +analysis_text_for_dialogue(content, conversation)
+    +create_conversation(db, user)
+    +generate_auto_reply_for_conversation(db, conversation, content, report_context)
+    +get_conversation(db, conversation_id)
+    +process_client_message(db, content, conversation_id, user, report_context)
+  }
+
+  class "app.services.classification" as ClassificationService <<module>> {
+    +classify_request(text)
+    +ClassificationResult
+  }
+
+  class "app.services.sentiment" as SentimentService <<module>> {
+    +analyze_sentiment(text)
+    +SentimentResult
+  }
+
+  class "app.services.knowledge_base" as KnowledgeBaseService <<module>> {
+    +get_category_by_name(db, category_name)
+    +get_active_other_category(db)
+    +resolve_active_category(db, category_name)
+    +select_knowledge_items(db, category, emotional_tone, limit)
+  }
+
+  class "app.services.response_generation" as ResponseGenerationService <<module>> {
+    +build_dialogue_context(latest_client_message, messages, report_context)
+    +build_clarifying_questions(text, category, dialogue_context)
+    +generate_fallback_response(text, category, emotional_tone, knowledge_items, report_context, dialogue_context)
+    +generate_chat_response(text, category, emotional_tone, knowledge_items, llama_client, report_context, dialogue_context)
+    +GeneratedChatResponse
+    +DialogueContext
+  }
+
+  class "app.services.prompt_builder" as PromptBuilder <<module>> {
+    +build_llama_messages(context)
+    +PromptContext
+  }
+
+  class "app.services.manager_workflow" as ManagerWorkflow <<module>> {
+    +resolve_appeal_client(appeal)
+    +resolve_appeal_client_user(db, appeal)
+    +assignment_group(appeal, current_manager_id)
+    +finish_appeal_for_manager(appeal, manager)
+    +change_client_type(client, client_type)
+    +mark_conversation_read(conversation, role)
+    +unread_messages_count(conversation, role)
+    +group_manager_appeals(appeals, current_manager_id)
+    +list_admin_report_conversations(db)
+    +list_manager_clients(db)
+    +get_report_conversation(db, client_user_id)
+    +get_or_create_report_conversation(db, client)
+  }
+
+  class "app.services.feedback" as FeedbackService <<module>> {
+    +normalize_ai_feedback(value, reason, custom_reason)
+    +manager_rating_summary(db, manager_id)
+    +manager_rating_rows(db)
+    +store_or_update_ai_feedback(db, message_id, appeal_id, client_user_id, value, reason, custom_reason)
+    +client_ai_feedback_map(db, client_user_id, message_ids)
+    +client_feedback_for_appeal(db, appeal_id, client_user_id)
+    +role_counts(db)
+  }
+
+  class "app.services.uploads" as UploadsService <<module>> {
+    +validate_upload_filename(filename)
+    +validate_upload_size(size_bytes)
+    +is_image_upload(filename)
+    +public_upload_name(original_filename)
+    +save_upload_file(upload, folder)
+    +StoredUpload
+  }
+
+  class "app.services.analytics" as AnalyticsService <<module>> {
+    +percent(part, total)
+    +grouped_appeal_status(status)
+    +build_admin_analytics(db)
+    +status_rows_for_chart(status_counts)
+  }
+
+  class "app.services.labels" as LabelsService <<module>> {
+    +status_label(value)
+    +tone_label(value)
+    +category_label(value)
+    +sender_label(value)
+    +message_author_name(message, conversation, appeal)
+    +message_role_label(message)
+    +message_date_label(value, today)
+    +role_label(value)
+    +client_type_label(value)
+    +source_label(value)
+    +latest_generated_response(responses)
+    +appeal_category_label(appeal)
+    +current_appeal_tone(appeal)
+    +client_identifier(appeal)
+  }
+}
+
+package "Ядро: app/core" {
+  class "app.core.auth" as AuthService <<module>> {
+    +session_user(request)
+    +store_session_user(request, user)
+    +clear_session(request)
+    +get_current_user(request, db)
+    +login_redirect(request)
+    +access_denied(request)
+    +require_auth(request, db)
+    +require_role(request, db, roles)
+    +find_user_for_login(db, login)
+  }
+
+  class "app.core.security" as SecurityService <<module>> {
+    +hash_password(password)
+    +verify_password(password, password_hash)
+    +generate_session_token()
+  }
+
+  class "app.core.config" as ConfigModule <<module>> {
+    +read_bool(name, default)
+    +build_database_url()
+    +settings
+  }
+
+  class "Settings" as Settings {
+    +app_name : str
+    +debug : bool
+    +secret_key : str
+    +database_url : str
+    +use_llama : bool
+    +llama_base_url : str
+    +llama_model_name : str
+    +llama_timeout_seconds : float
+  }
+
+  class "app.core.templates" as TemplatesService <<module>> {
+    +inject_current_user(request)
+    +create_templates()
+  }
+}
+
+package "Локальная LLM-интеграция: app/llama" {
+  class "app.llama.client.LlamaCppClient" as LlamaCppClient {
+    +endpoint_url : str
+    +model_name : str
+    +timeout_seconds : float
+    +chat(messages)
+    -_validate_local_endpoint()
+  }
+
+  class "app.llama.client.LlamaChatMessage" as LlamaChatMessage {
+    +role : str
+    +content : str
+  }
+
+  class "app.llama.client.LlamaClientError" as LlamaClientError
+}
+
+ChatWorkflow ..> User
+ChatWorkflow ..> ClientSession
+ChatWorkflow ..> Conversation
+ChatWorkflow ..> Message
+ChatWorkflow ..> Appeal
+ChatWorkflow ..> SentimentAnalysis
+ChatWorkflow ..> GeneratedResponse
+ChatWorkflow ..> HandoverRequest
+ChatWorkflow ..> ClassificationService : "классификация"
+ChatWorkflow ..> SentimentService : "тональность"
+ChatWorkflow ..> KnowledgeBaseService : "база знаний"
+ChatWorkflow ..> ResponseGenerationService : "генерация"
+
+ResponseGenerationService ..> KnowledgeBaseItem
+ResponseGenerationService ..> Message
+ResponseGenerationService ..> ConfigModule : "settings.use_llama"
+ResponseGenerationService ..> PromptBuilder
+ResponseGenerationService ..> LlamaCppClient
+ResponseGenerationService ..> LlamaClientError
+PromptBuilder ..> LlamaChatMessage
+PromptBuilder ..> KnowledgeBaseItem
+
+KnowledgeBaseService ..> Category
+KnowledgeBaseService ..> KnowledgeBaseItem
+SentimentService ..> Message : "используется косвенно через текст"
+ClassificationService ..> Message : "используется косвенно через текст"
+
+ManagerWorkflow ..> User
+ManagerWorkflow ..> Appeal
+ManagerWorkflow ..> ClientSession
+ManagerWorkflow ..> Conversation
+ManagerWorkflow ..> Message
+ManagerWorkflow ..> AdvertisingReport
+
+FeedbackService ..> AiResponseFeedback
+FeedbackService ..> AppealFeedback
+FeedbackService ..> User
+UploadsService ..> MessageAttachment : "заполняет данные для вложений"
+UploadsService ..> AdvertisingReport : "заполняет данные для отчетов"
+AnalyticsService ..> User
+AnalyticsService ..> Appeal
+AnalyticsService ..> KnowledgeBaseItem
+AnalyticsService ..> AiResponseFeedback
+AnalyticsService ..> FeedbackService
+AnalyticsService ..> LabelsService
+LabelsService ..> Appeal
+LabelsService ..> Conversation
+LabelsService ..> Message
+LabelsService ..> GeneratedResponse
+LabelsService ..> SentimentService
+
+AuthService ..> User
+SecurityService ..> User : "хеш пароля"
+ConfigModule ..> Settings
+TemplatesService ..> LabelsService
+TemplatesService ..> FeedbackService
+TemplatesService ..> ManagerWorkflow
+TemplatesService ..> AnalyticsService
+LlamaCppClient ..> LlamaChatMessage
+LlamaCppClient ..> LlamaClientError
+
+note right of LlamaCppClient
+  Проверяет, что endpoint локальный:
+  localhost, 127.0.0.1 или ::1.
+end note
+
+@enduml

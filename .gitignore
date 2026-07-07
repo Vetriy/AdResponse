@@ -1,6 +1,8 @@
 # Python bytecode and caches
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 
 # Virtual environments
@@ -26,11 +28,26 @@ htmlcov/
 *.sqlite3
 *.db-journal
 
+# Local model files
+models/
+*.gguf
+
 # Local uploaded files
 storage/uploads/
 
+# Local ML artifacts
+ml/finetune_llm/checkpoints/
+ml/finetune_llm/adapters/
+ml/finetune_llm/merged_models/
+ml/finetune_llm/gguf_models/
+
 # OS files
 .DS_Store
+
+# Local-only README files
+README.md
+**/README.md
+ml/finetune_llm/README.md
 
 # Editor files
 .idea/

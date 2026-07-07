@@ -1,0 +1,313 @@
+%% Диаграмма классов отражает реальные модели и функциональные модули.
+%% В app/services большая часть логики реализована функциями, поэтому сервисные файлы показаны как модули со стереотипом <<module>>.
+classDiagram
+    class DomainModels {
+        <<group>>
+        +models
+    }
+
+    class User {
+        +int id
+        +str username
+        +str email
+        +str full_name
+        +str role
+        +str client_type
+        +str hashed_password
+        +bool is_active
+    }
+
+    class ClientSession {
+        +int id
+        +int user_id
+        +str client_name
+        +str client_contact
+        +str source
+        +str status
+    }
+
+    class Conversation {
+        +int id
+        +int client_session_id
+        +str title
+        +str status
+        +str conversation_type
+        +bool auto_reply_enabled
+        +datetime client_last_read_at
+        +datetime manager_last_read_at
+    }
+
+    class Message {
+        +int id
+        +int conversation_id
+        +str sender_type
+        +str sender_display_name
+        +str content
+    }
+
+    class MessageAttachment {
+        +int id
+        +int message_id
+        +int uploaded_by_user_id
+        +str original_filename
+        +str stored_path
+        +int size_bytes
+    }
+
+    class Appeal {
+        +int id
+        +int conversation_id
+        +int category_id
+        +int assigned_manager_id
+        +str status
+        +str emotional_tone
+        +str request_category
+        +str priority
+        +bool auto_reply_enabled
+    }
+
+    class Category {
+        +int id
+        +str slug
+        +str name
+        +str description
+        +bool is_active
+    }
+
+    class KnowledgeBaseItem {
+        +int id
+        +int category_id
+        +str emotional_tone
+        +str title
+        +str content
+        +bool is_active
+        +int priority
+    }
+
+    class SentimentAnalysis {
+        +int id
+        +int message_id
+        +str emotional_tone
+        +float confidence
+        +str explanation
+    }
+
+    class GeneratedResponse {
+        +int id
+        +int appeal_id
+        +str response_text
+        +str source
+        +float confidence
+        +str status
+    }
+
+    class HandoverRequest {
+        +int id
+        +int appeal_id
+        +str reason
+        +str status
+    }
+
+    class AdvertisingReport {
+        +int id
+        +int client_user_id
+        +int appeal_id
+        +int conversation_id
+        +int uploaded_by_user_id
+        +str title
+        +str description
+        +str stored_path
+        +int size_bytes
+    }
+
+    class AppealFeedback {
+        +int id
+        +int appeal_id
+        +int client_user_id
+        +int manager_user_id
+        +int rating
+        +str comment
+    }
+
+    class AiResponseFeedback {
+        +int id
+        +int message_id
+        +int appeal_id
+        +int client_user_id
+        +str value
+        +str reason
+        +str custom_reason
+    }
+
+    User "1" --> "*" ClientSession : "клиентские сессии"
+    ClientSession "1" --> "*" Conversation : "диалоги"
+    Conversation "1" --> "*" Message : "сообщения"
+    Conversation "1" --> "0..1" Appeal : "обращение"
+    Message "1" --> "0..1" SentimentAnalysis : "тональность"
+    Message "1" --> "*" MessageAttachment : "вложения"
+    Category "1" --> "*" KnowledgeBaseItem : "комментарии"
+    Category "1" --> "*" Appeal : "категория"
+    User "1" --> "*" Appeal : "назначенный менеджер"
+    Appeal "1" --> "*" GeneratedResponse : "автоответы"
+    Appeal "1" --> "*" HandoverRequest : "передача"
+    User "1" --> "*" AdvertisingReport : "клиент или загрузивший"
+    Conversation "1" --> "*" AdvertisingReport : "чат отчетов"
+    Appeal "1" --> "*" AppealFeedback : "оценки"
+    Message "1" --> "*" AiResponseFeedback : "оценки автоответов"
+
+    class ServiceModules {
+        <<group>>
+        +services_core_llama
+    }
+
+    class ChatWorkflow {
+        <<module>>
+        +create_conversation(db, user)
+        +get_conversation(db, id)
+        +process_client_message()
+        +generate_auto_reply_for_conversation()
+        +report_context_for_linked_appeal(appeal)
+    }
+
+    class ClassificationService {
+        <<module>>
+        +classify_request(text)
+        +ClassificationResult
+    }
+
+    class SentimentService {
+        <<module>>
+        +analyze_sentiment(text)
+        +SentimentResult
+    }
+
+    class KnowledgeBaseService {
+        <<module>>
+        +resolve_active_category(db, category_name)
+        +select_knowledge_items(db, category, tone)
+        +get_active_other_category(db)
+    }
+
+    class ResponseGenerationService {
+        <<module>>
+        +build_dialogue_context()
+        +generate_fallback_response()
+        +generate_chat_response()
+        +GeneratedChatResponse
+        +DialogueContext
+    }
+
+    class PromptBuilder {
+        <<module>>
+        +build_llama_messages(context)
+        +PromptContext
+    }
+
+    class ManagerWorkflow {
+        <<module>>
+        +group_manager_appeals(appeals, manager_id)
+        +finish_appeal_for_manager(appeal, manager)
+        +get_or_create_report_conversation(db, client)
+        +list_manager_clients(db)
+        +list_admin_report_conversations(db)
+        +mark_conversation_read(conversation, role)
+        +unread_messages_count(conversation, role)
+    }
+
+    class FeedbackService {
+        <<module>>
+        +store_or_update_ai_feedback()
+        +client_ai_feedback_map(db, client_id, message_ids)
+        +client_feedback_for_appeal(db, appeal_id, client_id)
+        +manager_rating_summary(db, manager_id)
+        +manager_rating_rows(db)
+    }
+
+    class UploadsService {
+        <<module>>
+        +validate_upload_filename(filename)
+        +validate_upload_size(size_bytes)
+        +is_image_upload(filename)
+        +save_upload_file(upload, folder)
+    }
+
+    class AnalyticsService {
+        <<module>>
+        +build_admin_analytics(db)
+        +status_rows_for_chart(status_counts)
+    }
+
+    class LabelsService {
+        <<module>>
+        +status_label(value)
+        +tone_label(value)
+        +category_label(value)
+        +current_appeal_tone(appeal)
+        +client_identifier(appeal)
+    }
+
+    class AuthService {
+        <<module>>
+        +get_current_user(request, db)
+        +require_role(request, db, roles)
+        +find_user_for_login(db, login)
+        +store_session_user(request, user)
+    }
+
+    class SecurityService {
+        <<module>>
+        +hash_password(password)
+        +verify_password(password, password_hash)
+    }
+
+    class ConfigSettings {
+        <<dataclass>>
+        +database_url
+        +use_llama
+        +llama_base_url
+        +llama_model_name
+        +llama_timeout_seconds
+    }
+
+    class LlamaCppClient {
+        +str endpoint_url
+        +str model_name
+        +float timeout_seconds
+        +chat(messages)
+    }
+
+    ChatWorkflow ..> User : "создает сессию клиента"
+    ChatWorkflow ..> Conversation : "создает и читает"
+    ChatWorkflow ..> Message : "сохраняет сообщения"
+    ChatWorkflow ..> Appeal : "создает и обновляет"
+    ChatWorkflow ..> SentimentAnalysis : "сохраняет результат"
+    ChatWorkflow ..> GeneratedResponse : "сохраняет автоответ"
+    ChatWorkflow ..> HandoverRequest : "создает при передаче"
+    ChatWorkflow ..> ClassificationService : "категория"
+    ChatWorkflow ..> SentimentService : "тон"
+    ChatWorkflow ..> KnowledgeBaseService : "база знаний"
+    ChatWorkflow ..> ResponseGenerationService : "текст ответа"
+
+    ResponseGenerationService ..> PromptBuilder : "промпт для llama.cpp"
+    ResponseGenerationService ..> LlamaCppClient : "локальный вызов"
+    ResponseGenerationService ..> ConfigSettings : "USE_LLAMA и endpoint"
+    PromptBuilder ..> KnowledgeBaseItem : "подготовленные комментарии"
+
+    ManagerWorkflow ..> User : "клиенты и менеджеры"
+    ManagerWorkflow ..> Appeal : "группы и закрытие"
+    ManagerWorkflow ..> Conversation : "чат отчетов и прочтение"
+    ManagerWorkflow ..> AdvertisingReport : "отчеты"
+    ManagerWorkflow ..> Message : "непрочитанные"
+
+    FeedbackService ..> AppealFeedback : "оценка менеджера"
+    FeedbackService ..> AiResponseFeedback : "оценка автоответа"
+    FeedbackService ..> User : "рейтинги менеджеров"
+    UploadsService ..> MessageAttachment : "файлы сообщений"
+    UploadsService ..> AdvertisingReport : "файлы отчетов"
+    AnalyticsService ..> User : "статистика ролей"
+    AnalyticsService ..> Appeal : "статистика статусов"
+    AnalyticsService ..> KnowledgeBaseItem : "активность комментариев"
+    AnalyticsService ..> AiResponseFeedback : "like и dislike"
+    LabelsService ..> Appeal : "русские подписи"
+    AuthService ..> User : "сессии и роли"
+    SecurityService ..> User : "хеш пароля"

@@ -1,0 +1,75 @@
+@startuml
+title Работа с рекламным отчетом и чатом по отчетам
+
+autonumber
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #4D5A7A
+  ParticipantBorderColor #8B7BB7
+  ParticipantBackgroundColor #F8F3FF
+  ActorBorderColor #5D8F7B
+  ActorBackgroundColor #E9F7F2
+}
+
+actor "Менеджер" as Manager
+participant "Интерфейс менеджера" as ManagerUI
+participant "Серверная часть" as Server
+database "Файловое\nхранилище" as Storage
+database "База данных" as DB
+actor "Клиент" as Client
+participant "Чат по отчетам" as ReportChat
+participant "Онлайн-помощник" as Assistant
+actor "Администратор" as Admin
+
+Manager -> ManagerUI : Выбирает действующего клиента
+Manager -> ManagerUI : Загружает рекламный отчет\nс названием и описанием
+ManagerUI -> Server : Передает данные отчета\nи файл
+Server -> DB : Проверяет, что клиент\nявляется действующим
+Server -> Storage : Сохраняет файл\nв локальном хранилище
+Storage --> Server : Возвращает сведения\nо сохраненном файле
+Server -> DB : Создает или открывает\nпостоянный чат по отчетам
+Server -> DB : Сохраняет запись об отчете
+Server -> DB : Связывает отчет\nс чатом по отчетам
+Server -> DB : Добавляет сообщение\nо загрузке отчета
+Server --> ManagerUI : Показывает обновленный\nчат по отчетам
+
+Client -> ReportChat : Открывает раздел отчетов\nв личном кабинете
+ReportChat -> DB : Проверяет тип клиента\nи наличие отчетов
+
+alt Клиент является действующим
+  ReportChat --> Client : Показывает отчет\nи чат по отчетам
+else Клиент не является действующим
+  ReportChat --> Client : Скрывает раздел отчетов\nили сообщает об отсутствии доступа
+end
+
+Client -> ReportChat : Задает вопрос по отчету
+ReportChat -> DB : Сохраняет вопрос\nв истории чата
+ReportChat -> DB : Получает контекст отчета\nпо названию и описанию
+
+alt Автоответы включены
+  ReportChat -> Assistant : Передает вопрос\nи контекст отчета
+  Assistant -> Assistant : Формирует ответ\nпо контексту отчета
+  Assistant -> DB : Сохраняет автоматический ответ
+  Assistant --> ReportChat : Передает ответ клиенту
+  ReportChat --> Client : Показывает ответ\nонлайн-помощника
+else Автоответы выключены
+  ReportChat -> DB : Помечает чат как ожидающий\nответа менеджера
+  ReportChat --> Client : Показывает, что вопрос\nожидает ответа специалиста
+end
+
+opt Администратор просматривает чаты по отчетам
+  Admin -> ManagerUI : Открывает раздел обращений
+  ManagerUI -> Server : Запрашивает чаты по отчетам
+  Server -> DB : Загружает постоянные чаты,\nклиентов и последние отчеты
+  Server --> ManagerUI : Возвращает список чатов
+  ManagerUI --> Admin : Показывает чаты по отчетам
+end
+
+note over Storage, DB
+  Сервис хранит файлы локально.
+  В автоматическом ответе используется контекст
+  из названия и описания отчета, без разбора
+  содержимого загруженного файла.
+end note
+
+@enduml

@@ -1,0 +1,172 @@
+@startuml
+title Диаграмма прецедентов интерактивного онлайн-сервиса
+
+left to right direction
+skinparam backgroundColor #FEFCF8
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam roundcorner 18
+skinparam usecase {
+  BackgroundColor #F4F7FF
+  BorderColor #A8B8D8
+  FontColor #374151
+}
+skinparam rectangle {
+  BackgroundColor #FFFDF9
+  BorderColor #B8C6D9
+  FontColor #374151
+}
+skinparam actor {
+  FontColor #374151
+  BorderColor #7A8FA8
+}
+
+actor "Клиент" as Client
+actor "Менеджер" as Manager
+actor "Администратор" as Admin
+actor "Онлайн-помощник" as Assistant
+
+Admin --|> Manager
+
+rectangle "Интерактивный онлайн-сервис рекламного агентства" as System {
+  package "Работа с учетной записью" {
+    usecase "Зарегистрировать\nкабинет клиента" as UC_Register
+    usecase "Войти в систему" as UC_Login
+    usecase "Выйти из системы" as UC_Logout
+    usecase "Открыть личный\nкабинет клиента" as UC_ClientAccount
+  }
+
+  package "Обращения клиента" {
+    usecase "Создать новое\nобращение" as UC_CreateAppeal
+    usecase "Продолжить\nобращение" as UC_ContinueAppeal
+    usecase "Отправить сообщение\nв обращении" as UC_SendAppealMessage
+    usecase "Прикрепить файл\nк сообщению" as UC_AttachFile
+    usecase "Просмотреть историю\nобращения" as UC_ViewAppealHistory
+  }
+
+  package "Автоматическая обработка" {
+    usecase "Сохранить сообщение\nи обращение" as UC_SaveAppealMessage
+    usecase "Определить категорию\nобращения" as UC_DetectCategory
+    usecase "Определить\nэмоциональный тон" as UC_DetectTone
+    usecase "Подобрать подготовленные\nкомментарии базы знаний" as UC_SelectKnowledge
+    usecase "Сформировать\nавтоматический ответ" as UC_GenerateReply
+    usecase "Использовать локальную\nязыковую модель" as UC_LocalLlm
+    usecase "Задать уточняющие\nвопросы" as UC_Clarify
+    usecase "Передать обращение\nменеджеру с контекстом" as UC_Handover
+  }
+
+  package "Работа менеджера" {
+    usecase "Просмотреть панель\nобращений" as UC_ManagerDashboard
+    usecase "Фильтровать обращения\nпо статусу, категории и тону" as UC_FilterAppeals
+    usecase "Открыть детали\nобращения" as UC_ManagerAppealDetail
+    usecase "Принять обращение\nв работу" as UC_AcceptAppeal
+    usecase "Отправить ручной\nответ клиенту" as UC_ManagerReply
+    usecase "Изменить статус\nобращения" as UC_UpdateAppealStatus
+    usecase "Завершить обращение" as UC_CloseAppeal
+    usecase "Включить или выключить\nавтоответы обращения" as UC_ToggleAppealAuto
+    usecase "Просмотреть базу\nклиентов" as UC_ClientBase
+    usecase "Изменить тип клиента" as UC_ChangeClientType
+  }
+
+  package "Рекламные отчеты" {
+    usecase "Загрузить рекламный\nотчет клиенту" as UC_UploadReport
+    usecase "Просмотреть рекламные\nотчеты" as UC_ViewReports
+    usecase "Скачать файл отчета" as UC_DownloadReport
+    usecase "Открыть чат\nпо отчетам" as UC_ReportChat
+    usecase "Отправить сообщение\nв чате отчетов" as UC_ReportMessage
+    usecase "Включить или выключить\nавтоответы чата отчетов" as UC_ToggleReportAuto
+  }
+
+  package "Администрирование" {
+    usecase "Открыть\nадмин-панель" as UC_AdminDashboard
+    usecase "Управлять\nпользователями" as UC_ManageUsers
+    usecase "Назначить роль\nи тип клиента" as UC_AssignRoleType
+    usecase "Сбросить пароль\nпользователя" as UC_ResetPassword
+    usecase "Выключить или\nархивировать пользователя" as UC_DeactivateUser
+    usecase "Управлять категориями\nобращений" as UC_ManageCategories
+    usecase "Управлять подготовленными\nкомментариями" as UC_ManageKnowledge
+  }
+
+  package "Аналитика и обратная связь" {
+    usecase "Оценить автоответ" as UC_RateAutoReply
+    usecase "Оценить завершенное\nобращение и менеджера" as UC_RateManager
+    usecase "Просмотреть административную\nаналитику" as UC_AdminAnalytics
+    usecase "Просмотреть оценки\nавтоответов" as UC_ViewAiFeedback
+    usecase "Просмотреть рейтинг\nменеджеров" as UC_ViewManagerRating
+  }
+}
+
+Client --> UC_Register
+Client --> UC_Login
+Client --> UC_Logout
+Client --> UC_ClientAccount
+Client --> UC_CreateAppeal
+Client --> UC_ContinueAppeal
+Client --> UC_ViewAppealHistory
+Client --> UC_AttachFile
+Client --> UC_ViewReports
+Client --> UC_DownloadReport
+Client --> UC_ReportChat
+Client --> UC_ReportMessage
+Client --> UC_RateAutoReply
+Client --> UC_RateManager
+
+Manager --> UC_Login
+Manager --> UC_Logout
+Manager --> UC_ManagerDashboard
+Manager --> UC_ManagerAppealDetail
+Manager --> UC_AcceptAppeal
+Manager --> UC_ManagerReply
+Manager --> UC_UpdateAppealStatus
+Manager --> UC_CloseAppeal
+Manager --> UC_ToggleAppealAuto
+Manager --> UC_ClientBase
+Manager --> UC_ChangeClientType
+Manager --> UC_UploadReport
+Manager --> UC_ReportChat
+Manager --> UC_ReportMessage
+Manager --> UC_ToggleReportAuto
+Manager --> UC_ViewManagerRating
+
+Admin --> UC_AdminDashboard
+Admin --> UC_ManageUsers
+Admin --> UC_ManageCategories
+Admin --> UC_ManageKnowledge
+Admin --> UC_AdminAnalytics
+
+Assistant --> UC_DetectCategory
+Assistant --> UC_DetectTone
+Assistant --> UC_SelectKnowledge
+Assistant --> UC_GenerateReply
+Assistant --> UC_Clarify
+Assistant --> UC_Handover
+
+UC_CreateAppeal ..> UC_SendAppealMessage : <<включает>>
+UC_ContinueAppeal ..> UC_SendAppealMessage : <<включает>>
+UC_SendAppealMessage ..> UC_SaveAppealMessage : <<включает>>
+UC_SendAppealMessage ..> UC_GenerateReply : <<включает>>
+UC_AttachFile ..> UC_SendAppealMessage : <<расширяет>>
+
+UC_GenerateReply ..> UC_DetectCategory : <<включает>>
+UC_GenerateReply ..> UC_DetectTone : <<включает>>
+UC_GenerateReply ..> UC_SelectKnowledge : <<включает>>
+UC_GenerateReply ..> UC_LocalLlm : <<расширяет>>
+UC_Clarify ..> UC_GenerateReply : <<расширяет>>
+UC_Handover ..> UC_GenerateReply : <<расширяет>>
+
+UC_ManagerDashboard ..> UC_FilterAppeals : <<включает>>
+UC_AcceptAppeal ..> UC_ToggleAppealAuto : <<включает>>
+UC_ManagerReply ..> UC_AttachFile : <<расширяет>>
+UC_UploadReport ..> UC_ReportChat : <<включает>>
+UC_ReportMessage ..> UC_AttachFile : <<расширяет>>
+UC_ReportMessage ..> UC_GenerateReply : <<расширяет>>
+
+UC_ManageUsers ..> UC_AssignRoleType : <<включает>>
+UC_ManageUsers ..> UC_ResetPassword : <<включает>>
+UC_ManageUsers ..> UC_DeactivateUser : <<включает>>
+UC_AdminDashboard ..> UC_AdminAnalytics : <<включает>>
+UC_AdminAnalytics ..> UC_ViewAiFeedback : <<включает>>
+UC_AdminAnalytics ..> UC_ViewManagerRating : <<включает>>
+
+
+@enduml

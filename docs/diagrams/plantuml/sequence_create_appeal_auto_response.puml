@@ -1,0 +1,67 @@
+@startuml
+title Создание обращения и получение автоматического ответа
+
+autonumber
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #4D5A7A
+  LifeLineBorderColor #8B7BB7
+  ParticipantBorderColor #8B7BB7
+  ParticipantBackgroundColor #F8F3FF
+  ActorBorderColor #5D8F7B
+  ActorBackgroundColor #E9F7F2
+}
+
+actor "Клиент" as Client
+participant "Интерфейс чата" as ChatUI
+participant "Серверная часть" as Server
+participant "Модуль обработки\nобращения" as AppealModule
+participant "Модуль анализа\nобращения" as AnalysisModule
+participant "База знаний" as KnowledgeBase
+participant "Модуль формирования\nответа" as ResponseModule
+participant "Локальная языковая\nмодель" as LocalModel
+database "База данных" as DB
+
+Client -> ChatUI : Вводит и отправляет сообщение
+ChatUI -> Server : Передает сообщение клиента
+Server -> AppealModule : Запускает обработку обращения
+
+alt Новое обращение
+  AppealModule -> DB : Создает клиентскую сессию\nи новый диалог
+else Продолжение диалога
+  AppealModule -> DB : Открывает существующее обращение\nи проверяет доступ клиента
+end
+
+AppealModule -> DB : Сохраняет сообщение\nв истории диалога
+AppealModule -> AnalysisModule : Передает текст и контекст диалога
+AnalysisModule -> AnalysisModule : Определяет категорию обращения
+AnalysisModule -> AnalysisModule : Определяет эмоциональный тон
+AnalysisModule --> AppealModule : Возвращает результаты анализа
+AppealModule -> DB : Сохраняет результаты анализа
+AppealModule -> KnowledgeBase : Запрашивает подходящие\nподготовленные комментарии
+KnowledgeBase -> DB : Выбирает активные материалы\nпо категории и тону
+KnowledgeBase --> AppealModule : Передает материалы базы знаний
+AppealModule -> ResponseModule : Передает текст, контекст,\nкатегорию, тон и материалы
+
+alt Локальная модель доступна
+  ResponseModule -> LocalModel : Запрашивает первичный ответ
+  LocalModel --> ResponseModule : Возвращает текст ответа
+else Локальная модель недоступна или отключена
+  ResponseModule -> ResponseModule : Формирует ответ\nпо резервным правилам
+end
+
+ResponseModule --> AppealModule : Передает автоматический ответ\nи рекомендацию по менеджеру
+
+alt Требуется участие менеджера
+  AppealModule -> DB : Обновляет обращение как требующее\nвнимания менеджера
+  AppealModule -> DB : Сохраняет запрос передачи менеджеру
+else Достаточно автоматического ответа
+  AppealModule -> DB : Обновляет обращение как\nобработанное автоматически
+end
+
+AppealModule -> DB : Сохраняет автоматический ответ\nв истории диалога
+AppealModule --> Server : Возвращает результат обработки
+Server --> ChatUI : Передает ответ и обновленные сведения\nоб обращении
+ChatUI --> Client : Показывает автоматический ответ
+
+@enduml

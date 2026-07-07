@@ -1,14 +1,17 @@
 from urllib.parse import parse_qs, quote
 
+import httpx
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.auth import login_redirect, require_role
+from app.core.config import settings
 from app.core.security import hash_password
 from app.core.templates import create_templates
 from app.db.session import SessionLocal, database_error_message, get_engine
+from app.llama.client import LlamaClientError, LlamaCppClient
 from app.models import AdvertisingReport, Appeal, Category, KnowledgeBaseItem, User
 from app.services.analytics import build_admin_analytics, status_rows_for_chart
 from app.services.feedback import manager_rating_rows, manager_rating_summary
@@ -171,6 +174,58 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
                 "status_chart_rows": status_rows_for_chart(analytics["appeals"]["status_counts"]),
             },
         )
+    finally:
+        db.close()
+
+
+@router.get("/llm-status")
+async def llm_status(request: Request):
+    if not request.session.get("user"):
+        return login_redirect(request)
+    db = open_db()
+    try:
+        admin = ensure_admin(request, db)
+        if not hasattr(admin, "id"):
+            return admin
+
+        status = {
+            "use_llama": settings.use_llama,
+            "llama_base_url": settings.llama_base_url,
+            "llama_model_name": settings.llama_model_name,
+            "llama_timeout_seconds": settings.llama_timeout_seconds,
+            "chat_completions_url": None,
+            "available": False,
+            "error": None,
+        }
+        if not settings.use_llama:
+            status["error"] = "USE_LLAMA is disabled; rule-based fallback will be used."
+            return JSONResponse(status)
+
+        try:
+            client = LlamaCppClient(
+                endpoint_url=settings.llama_base_url,
+                model_name=settings.llama_model_name,
+                timeout_seconds=settings.llama_timeout_seconds,
+            )
+            status["chat_completions_url"] = client.endpoint_url
+            models_url = f"{client.endpoint_url.removesuffix('/chat/completions')}/models"
+            async with httpx.AsyncClient(timeout=settings.llama_timeout_seconds) as http_client:
+                response = await http_client.get(models_url)
+                response.raise_for_status()
+                data = response.json()
+            status["available"] = True
+            status["models_url"] = models_url
+            status["models"] = data.get("data", data)
+        except LlamaClientError as error:
+            status["error"] = str(error)
+        except httpx.TimeoutException:
+            status["error"] = "llama.cpp status request timed out."
+        except httpx.HTTPError as error:
+            status["error"] = f"llama.cpp is not available: {error}"
+        except ValueError:
+            status["error"] = "llama.cpp returned invalid JSON from /v1/models."
+
+        return JSONResponse(status)
     finally:
         db.close()
 

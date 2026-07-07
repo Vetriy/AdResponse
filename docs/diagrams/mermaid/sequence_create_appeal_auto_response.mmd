@@ -1,0 +1,69 @@
+%% Основной сценарий соответствует app/routers/chat.py и app/services/chat_workflow.py.
+sequenceDiagram
+    autonumber
+    actor Client as Клиент
+    participant UI as "Страница чата"
+    participant Router as "Маршрут chat.send_chat_message"
+    participant Workflow as "Сервис chat_workflow.process_client_message"
+    participant DB as "База данных"
+    participant Classifier as "Сервис classification.classify_request"
+    participant Sentiment as "Сервис sentiment.analyze_sentiment"
+    participant KB as "Сервис knowledge_base"
+    participant Generator as "Сервис response_generation.generate_chat_response"
+    participant Llama as "Локальный llama.cpp"
+
+    Client->>UI: Вводит сообщение обращения
+    UI->>Router: POST /chat/api/messages
+    Router->>Router: Проверяет роль клиента
+    Router->>Workflow: Передает текст, conversation_id и пользователя
+
+    alt Новый диалог
+        Workflow->>DB: Создает ClientSession и Conversation с типом appeal
+    else Продолжение существующего диалога
+        Workflow->>DB: Загружает Conversation и проверяет принадлежность клиенту
+    end
+
+    Workflow->>DB: Сохраняет Message с sender_type client
+    alt Appeal еще не создан
+        Workflow->>DB: Создает Appeal для Conversation
+    else Appeal уже существует
+        Workflow->>DB: Обновляет существующий Appeal
+    end
+
+    Workflow->>Workflow: Собирает контекст текущего диалога
+    Workflow->>Classifier: Определяет категорию по тексту и истории
+    Classifier-->>Workflow: Возвращает ClassificationResult
+    Workflow->>Sentiment: Определяет эмоциональный тон
+    Sentiment-->>Workflow: Возвращает SentimentResult
+    Workflow->>DB: Сохраняет SentimentAnalysis для сообщения клиента
+    Workflow->>KB: resolve_active_category и select_knowledge_items
+    KB->>DB: Читает активную Category и KnowledgeBaseItem
+    KB-->>Workflow: Возвращает категорию и подготовленные комментарии
+    Workflow->>Generator: Формирует ответ с учетом категории, тона, базы знаний и контекста
+
+    alt USE_LLAMA=false
+        Generator-->>Workflow: Возвращает ответ local_rules
+    else USE_LLAMA=true
+        Generator->>Llama: Отправляет локальный HTTP-запрос /v1/chat/completions
+        alt llama.cpp доступен
+            Llama-->>Generator: Возвращает текст ответа
+            Generator-->>Workflow: Возвращает ответ local_llama_cpp
+        else llama.cpp недоступен или вернул ошибку
+            Generator-->>Workflow: Возвращает fallback local_rules
+        end
+    end
+
+    Workflow->>DB: Обновляет Appeal.category_id, request_category, emotional_tone
+    alt Нужен менеджер
+        Workflow->>DB: Устанавливает status needs_manager и priority high
+        Workflow->>DB: Создает HandoverRequest со status new
+    else Нужны уточнения
+        Workflow->>DB: Устанавливает status needs_clarification
+    else Автоответ готов
+        Workflow->>DB: Устанавливает status auto_answered
+    end
+    Workflow->>DB: Сохраняет Message с sender_type system
+    Workflow->>DB: Сохраняет GeneratedResponse
+    Workflow-->>Router: Возвращает Conversation, сообщения, Appeal и флаги
+    Router-->>UI: Возвращает ChatSendResponse
+    UI-->>Client: Показывает автоответ, категорию и рекомендацию по менеджеру

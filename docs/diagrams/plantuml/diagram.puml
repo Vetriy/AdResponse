@@ -1,0 +1,111 @@
+@startuml
+title Диаграмма классов ядра приложения и локальной LLM-интеграции
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #F8F3FF
+  BorderColor #8B7BB7
+}
+skinparam note {
+  BackgroundColor #FFF7E8
+  BorderColor #D8A45F
+}
+
+' Ядро приложения, шаблонные помощники, конфигурация и локальный LLM-клиент.
+' Сервисные файлы представлены как классы со стереотипом <<module>>.
+
+package "Ядро приложения: app/core" {
+  class "app.core.auth" as AuthService <<module>> {
+    +session_user(request)
+    +store_session_user(request, user)
+    +clear_session(request)
+    +get_current_user(request, db)
+    +login_redirect(request)
+    +access_denied(request)
+    +require_auth(request, db)
+    +require_role(request, db, roles)
+    +find_user_for_login(db, login)
+  }
+
+  class "app.core.security" as SecurityService <<module>> {
+    +hash_password(password)
+    +verify_password(password, password_hash)
+    +generate_session_token()
+  }
+
+  class "app.core.config" as ConfigModule <<module>> {
+    +read_bool(name, default)
+    +build_database_url()
+    +settings
+  }
+
+  class "Settings" as Settings {
+    +app_name : str
+    +debug : bool
+    +secret_key : str
+    +database_url : str
+    +use_llama : bool
+    +llama_base_url : str
+    +llama_model_name : str
+    +llama_timeout_seconds : float
+  }
+
+  class "app.core.templates" as TemplatesService <<module>> {
+    +inject_current_user(request)
+    +create_templates()
+  }
+}
+
+package "Локальная LLM-интеграция: app/llama" {
+  class "app.llama.client.LlamaCppClient" as LlamaCppClient {
+    +endpoint_url : str
+    +model_name : str
+    +timeout_seconds : float
+    +chat(messages)
+    -_validate_local_endpoint()
+  }
+
+  class "app.llama.client.LlamaChatMessage" as LlamaChatMessage {
+    +role : str
+    +content : str
+  }
+
+  class "app.llama.client.LlamaClientError" as LlamaClientError
+}
+
+package "Связанные сервисные модули" {
+  class "app.services.response_generation" as ResponseGenerationService <<module>>
+  class "app.services.prompt_builder" as PromptBuilder <<module>>
+  class "app.services.labels" as LabelsService <<module>>
+  class "app.services.feedback" as FeedbackService <<module>>
+  class "app.services.manager_workflow" as ManagerWorkflow <<module>>
+  class "app.services.analytics" as AnalyticsService <<module>>
+}
+
+class User <<model>>
+
+AuthService ..> User
+AuthService ..> SecurityService : "проверка пароля"
+SecurityService ..> User : "хеш пароля"
+
+ConfigModule ..> Settings : "параметры приложения"
+
+TemplatesService ..> LabelsService
+TemplatesService ..> FeedbackService
+TemplatesService ..> ManagerWorkflow
+TemplatesService ..> AnalyticsService
+
+ResponseGenerationService ..> ConfigModule : "settings.use_llama"
+ResponseGenerationService ..> PromptBuilder
+ResponseGenerationService ..> LlamaCppClient
+ResponseGenerationService ..> LlamaClientError
+
+PromptBuilder ..> LlamaChatMessage
+
+LlamaCppClient ..> LlamaChatMessage
+LlamaCppClient ..> LlamaClientError
+
+
+@enduml

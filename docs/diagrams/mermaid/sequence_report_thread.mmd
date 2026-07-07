@@ -1,0 +1,67 @@
+%% Чат отчетов реализован как Conversation с conversation_type = report_thread.
+%% Файлы отчетов сохраняются локально; содержимое отчета автоматически не парсится.
+sequenceDiagram
+    autonumber
+    actor Manager as Менеджер
+    participant ManagerRouter as "Маршруты manager"
+    participant ManagerWorkflow as "Сервис manager_workflow"
+    participant Uploads as "Сервис uploads"
+    participant DB as "База данных"
+    actor Client as Клиент
+    participant ClientRouter as "Маршруты client"
+    participant ChatWorkflow as "Сервис chat_workflow.generate_auto_reply_for_conversation"
+    participant Generator as "Сервис response_generation"
+    actor Admin as Администратор
+
+    Manager->>ManagerRouter: Открывает /manager/clients
+    ManagerRouter->>ManagerWorkflow: list_manager_clients
+    ManagerWorkflow->>DB: Загружает клиентов и сводку обращений
+    ManagerRouter-->>Manager: Показывает действующих и потенциальных клиентов
+
+    Manager->>ManagerRouter: Выбирает действующего клиента и загружает отчет
+    ManagerRouter->>DB: Проверяет role = client и client_type = active_client
+    ManagerRouter->>Uploads: validate_upload_filename и save_upload_file
+    Uploads-->>ManagerRouter: Возвращает StoredUpload с локальным путем
+    ManagerRouter->>ManagerWorkflow: get_or_create_report_conversation
+    ManagerWorkflow->>DB: Находит или создает ClientSession и Conversation report_thread
+    ManagerRouter->>DB: Сохраняет Message менеджера о загруженном отчете
+    ManagerRouter->>DB: Сохраняет AdvertisingReport с conversation_id
+    ManagerRouter-->>Manager: Возвращает чат отчетов клиента
+
+    Client->>ClientRouter: Открывает кабинет клиента
+    ClientRouter->>DB: Загружает отчеты только для active_client
+    ClientRouter-->>Client: Показывает раздел "Отчеты по рекламе"
+
+    Client->>ClientRouter: Открывает /client/reports
+    ClientRouter->>ManagerWorkflow: get_or_create_report_conversation
+    ClientRouter->>ManagerWorkflow: mark_conversation_read
+    ClientRouter-->>Client: Показывает постоянный чат отчетов
+
+    Client->>ClientRouter: Задает вопрос по отчету
+    ClientRouter->>DB: Сохраняет Message с sender_type client
+    opt Клиент прикрепил файлы
+        ClientRouter->>Uploads: save_upload_file
+        ClientRouter->>DB: Сохраняет MessageAttachment
+    end
+    ClientRouter->>DB: Загружает AdvertisingReport для контекста
+    ClientRouter->>ChatWorkflow: generate_auto_reply_for_conversation
+
+    alt Автоответы в чате отчетов включены
+        ChatWorkflow->>DB: Читает Conversation.messages
+        ChatWorkflow->>Generator: Формирует ответ с учетом названия и описания отчетов
+        Generator-->>ChatWorkflow: Возвращает текст автоответа
+        ChatWorkflow->>DB: Сохраняет Message с sender_type system
+        ChatWorkflow->>DB: Conversation.status = auto_answered или needs_manager
+    else Автоответы в чате отчетов выключены
+        ChatWorkflow->>DB: Conversation.status = needs_manager
+        ChatWorkflow-->>ClientRouter: Системный ответ не создается
+    end
+
+    ClientRouter-->>Client: Показывает обновленный чат отчетов
+
+    opt Администратор просматривает чаты отчетов
+        Admin->>ManagerRouter: Открывает /manager/dashboard как администратор
+        ManagerRouter->>ManagerWorkflow: list_admin_report_conversations
+        ManagerWorkflow->>DB: Загружает Conversation report_thread и AdvertisingReport
+        ManagerRouter-->>Admin: Показывает блок "Чаты по отчетам"
+    end

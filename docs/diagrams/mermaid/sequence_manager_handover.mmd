@@ -1,0 +1,72 @@
+%% Передача менеджеру строится по process_client_message и маршрутам app/routers/manager.py.
+sequenceDiagram
+    autonumber
+    actor Client as Клиент
+    participant ChatRouter as "Маршрут chat.send_chat_message"
+    participant ClientRouter as "Маршруты client"
+    participant Workflow as "Сервис chat_workflow.process_client_message"
+    participant DB as "База данных"
+    participant Generator as "Сервис response_generation"
+    actor Manager as Менеджер
+    participant ManagerRouter as "Маршруты manager"
+    participant ManagerWorkflow as "Сервис manager_workflow"
+
+    Client->>ChatRouter: Отправляет сложное, негативное или контактное сообщение
+    ChatRouter->>Workflow: process_client_message
+    Workflow->>DB: Сохраняет сообщение клиента и обновляет Appeal
+    Workflow->>Generator: Генерирует ответ и флаг передачи менеджеру
+    Generator-->>Workflow: handover_offered = true
+    Workflow->>DB: Сохраняет системный ответ
+    Workflow->>DB: Устанавливает Appeal.status = needs_manager
+    Workflow->>DB: Устанавливает Appeal.priority = high
+    Workflow->>DB: Создает HandoverRequest со status new
+    Workflow-->>ChatRouter: Возвращает ответ и признак передачи менеджеру
+    ChatRouter-->>Client: Показывает ответ с предложением менеджера
+
+    Manager->>ManagerRouter: Открывает /manager/dashboard
+    ManagerRouter->>DB: Загружает обращения, категории и фильтры
+    ManagerRouter->>ManagerWorkflow: group_manager_appeals
+    ManagerWorkflow-->>ManagerRouter: Группы обращений
+    ManagerRouter-->>Manager: Показывает обращение в панели
+
+    Manager->>ManagerRouter: Открывает карточку обращения
+    ManagerRouter->>DB: Загружает Appeal, Conversation, Messages, HandoverRequest
+    ManagerRouter->>ManagerWorkflow: mark_conversation_read
+    ManagerRouter-->>Manager: Показывает историю и текущий тон
+
+    Manager->>ManagerRouter: Нажимает "Принять обращение"
+    ManagerRouter->>DB: assigned_manager_id = текущий менеджер
+    ManagerRouter->>DB: Appeal.status = assigned_to_manager
+    ManagerRouter->>DB: Appeal.auto_reply_enabled = false
+    ManagerRouter-->>Manager: Возвращает карточку обращения
+
+    opt Менеджер меняет режим автоответов
+        Manager->>ManagerRouter: POST /manager/appeals/{id}/auto-reply
+        ManagerRouter->>DB: Переключает Appeal.auto_reply_enabled
+        alt Автоответы выключены
+            ManagerRouter->>DB: Appeal.status = needs_manager
+        end
+    end
+
+    Manager->>ManagerRouter: Отправляет ручной ответ
+    ManagerRouter->>DB: Сохраняет Message с sender_type manager
+    opt Менеджер прикрепил файлы
+        ManagerRouter->>DB: Сохраняет MessageAttachment
+    end
+    ManagerRouter->>DB: Appeal.status = manager_answered
+    ManagerRouter-->>Manager: Показывает обновленную историю
+
+    Client->>ClientRouter: Открывает свое обращение
+    ClientRouter->>DB: Загружает историю диалога
+    ClientRouter-->>Client: Показывает ручной ответ менеджера
+
+    Manager->>ManagerRouter: Нажимает "Завершить обращение"
+    ManagerRouter->>ManagerWorkflow: finish_appeal_for_manager
+    ManagerWorkflow->>DB: Устанавливает Appeal.status = closed
+    ManagerRouter-->>Manager: Показывает закрытое обращение
+
+    opt Клиент оценивает завершенное обращение
+        Client->>ClientRouter: POST /client/appeals/{id}/feedback
+        ClientRouter->>DB: Сохраняет AppealFeedback с рейтингом 1-5
+        ClientRouter-->>Client: Показывает сохраненную оценку
+    end

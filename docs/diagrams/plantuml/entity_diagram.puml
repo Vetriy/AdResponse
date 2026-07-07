@@ -1,0 +1,197 @@
+@startuml
+title Диаграмма сущностей интерактивного онлайн-сервиса
+
+hide circle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor #F8F3FF
+  BorderColor #8B7BB7
+}
+
+' Диаграмма построена по app/models/*.py.
+' created_at и updated_at есть во всех моделях через TimestampMixin и опущены ради читаемости.
+' Постоянный чат отчетов представлен как Conversation.conversation_type = "report_thread".
+
+entity User {
+  * id : int <<PK>>
+  --
+  username : string <<UK>>
+  email : string <<UK>>
+  full_name : string
+  role : string
+  client_type : string
+  hashed_password : string
+  is_active : bool
+}
+
+entity ClientSession {
+  * id : int <<PK>>
+  --
+  user_id : int <<FK>>
+  client_name : string
+  client_contact : string
+  source : string
+  status : string
+}
+
+entity Conversation {
+  * id : int <<PK>>
+  --
+  client_session_id : int <<FK>>
+  title : string
+  summary : text
+  status : string
+  conversation_type : string
+  auto_reply_enabled : bool
+  client_last_read_at : datetime
+  manager_last_read_at : datetime
+}
+
+entity Message {
+  * id : int <<PK>>
+  --
+  conversation_id : int <<FK>>
+  sender_type : string
+  sender_display_name : string
+  content : text
+}
+
+entity MessageAttachment {
+  * id : int <<PK>>
+  --
+  message_id : int <<FK>>
+  uploaded_by_user_id : int <<FK>>
+  original_filename : string
+  stored_filename : string
+  stored_path : string
+  content_type : string
+  size_bytes : int
+}
+
+entity Appeal {
+  * id : int <<PK>>
+  --
+  conversation_id : int <<FK, UK>>
+  category_id : int <<FK>>
+  assigned_manager_id : int <<FK>>
+  status : string
+  emotional_tone : string
+  request_category : string
+  priority : string
+  auto_reply_enabled : bool
+  notes : text
+}
+
+entity Category {
+  * id : int <<PK>>
+  --
+  slug : string <<UK>>
+  name : string
+  description : text
+  is_active : bool
+}
+
+entity KnowledgeBaseItem {
+  * id : int <<PK>>
+  --
+  category_id : int <<FK>>
+  emotional_tone : string
+  title : string
+  content : text
+  is_active : bool
+  priority : int
+}
+
+entity SentimentAnalysis {
+  * id : int <<PK>>
+  --
+  message_id : int <<FK, UK>>
+  emotional_tone : string
+  confidence : float
+  explanation : text
+}
+
+entity GeneratedResponse {
+  * id : int <<PK>>
+  --
+  appeal_id : int <<FK>>
+  response_text : text
+  source : string
+  confidence : float
+  status : string
+}
+
+entity HandoverRequest {
+  * id : int <<PK>>
+  --
+  appeal_id : int <<FK>>
+  reason : text
+  status : string
+}
+
+entity AdvertisingReport {
+  * id : int <<PK>>
+  --
+  client_user_id : int <<FK>>
+  appeal_id : int <<FK>>
+  conversation_id : int <<FK>>
+  uploaded_by_user_id : int <<FK>>
+  title : string
+  description : text
+  original_filename : string
+  stored_filename : string
+  stored_path : string
+  content_type : string
+  size_bytes : int
+}
+
+entity AppealFeedback {
+  * id : int <<PK>>
+  --
+  appeal_id : int <<FK>>
+  client_user_id : int <<FK>>
+  manager_user_id : int <<FK>>
+  rating : int
+  comment : text
+}
+
+entity AiResponseFeedback {
+  * id : int <<PK>>
+  --
+  message_id : int <<FK>>
+  appeal_id : int <<FK>>
+  client_user_id : int <<FK>>
+  value : string
+  reason : string
+  custom_reason : text
+}
+
+User ||--o{ ClientSession : "имеет сессии"
+ClientSession ||--o{ Conversation : "содержит диалоги"
+Conversation ||--o{ Message : "содержит сообщения"
+Conversation ||--o| Appeal : "обычное обращение"
+Message ||--o| SentimentAnalysis : "имеет анализ тона"
+Message ||--o{ MessageAttachment : "имеет вложения"
+User ||--o{ MessageAttachment : "загрузил файл"
+
+Category ||--o{ Appeal : "категория обращения"
+Category ||--o{ KnowledgeBaseItem : "комментарии"
+User ||--o{ Appeal : "назначенный менеджер"
+Appeal ||--o{ GeneratedResponse : "автоответы"
+Appeal ||--o{ HandoverRequest : "запросы передачи"
+
+User ||--o{ AdvertisingReport : "клиент отчета"
+User ||--o{ AdvertisingReport : "загрузивший отчет"
+Appeal ||--o{ AdvertisingReport : "отчеты из обращения"
+Conversation ||--o{ AdvertisingReport : "чат отчетов"
+
+Appeal ||--o{ AppealFeedback : "оценки обращения"
+User ||--o{ AppealFeedback : "клиент оставил оценку"
+User ||--o{ AppealFeedback : "менеджер получил оценку"
+Message ||--o{ AiResponseFeedback : "оценка автоответа"
+Appeal ||--o{ AiResponseFeedback : "оценка в обращении"
+User ||--o{ AiResponseFeedback : "клиент оценил автоответ"
+
+
+@enduml

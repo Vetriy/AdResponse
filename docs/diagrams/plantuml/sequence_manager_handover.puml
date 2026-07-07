@@ -1,0 +1,68 @@
+@startuml
+title Передача обращения менеджеру и отправка ответа клиенту
+
+autonumber
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #4D5A7A
+  ParticipantBorderColor #8B7BB7
+  ParticipantBackgroundColor #F8F3FF
+  ActorBorderColor #5D8F7B
+  ActorBackgroundColor #E9F7F2
+}
+
+actor "Клиент" as Client
+participant "Интерфейс чата" as ChatUI
+participant "Онлайн-помощник" as Assistant
+database "База данных" as DB
+participant "Панель менеджера" as ManagerPanel
+actor "Менеджер" as Manager
+participant "Личный кабинет\nклиента" as ClientCabinet
+
+Client -> ChatUI : Отправляет сложное\nили негативное сообщение
+ChatUI -> Assistant : Передает сообщение\nи историю диалога
+Assistant -> Assistant : Анализирует категорию,\nтон и полноту данных
+Assistant -> Assistant : Определяет необходимость\nучастия менеджера
+Assistant -> DB : Сохраняет сообщение клиента\nи автоматический ответ
+Assistant -> DB : Присваивает обращению статус,\nтребующий внимания менеджера
+Assistant -> DB : Сохраняет запрос передачи\nменеджеру
+Assistant --> ChatUI : Передает ответ с предложением\nпередачи менеджеру
+ChatUI --> Client : Показывает ответ онлайн-помощника
+
+Manager -> ManagerPanel : Открывает панель обращений
+ManagerPanel -> DB : Загружает обращения,\nожидающие обработки
+ManagerPanel --> Manager : Показывает обращение\nв списке
+
+Manager -> ManagerPanel : Открывает обращение
+ManagerPanel -> DB : Загружает историю диалога\nи сведения об обращении
+ManagerPanel --> Manager : Показывает контекст\nи текущий статус
+
+Manager -> ManagerPanel : Принимает обращение\nв работу
+ManagerPanel -> DB : Закрепляет обращение\nза менеджером
+ManagerPanel -> DB : Отключает автоответы\nдля работы менеджера
+
+opt Менеджер изменяет режим автоответов
+  Manager -> ManagerPanel : Включает или выключает\nавтоответы обращения
+  ManagerPanel -> DB : Сохраняет выбранный режим
+end
+
+Manager -> ManagerPanel : Отправляет ответ клиенту
+ManagerPanel -> DB : Сохраняет ответ менеджера\nв истории диалога
+ManagerPanel -> DB : Обновляет статус обращения
+ManagerPanel --> Manager : Показывает обновленную\nисторию
+
+Client -> ClientCabinet : Открывает свое обращение
+ClientCabinet -> DB : Загружает историю диалога
+ClientCabinet --> Client : Показывает ответ менеджера
+
+Manager -> ManagerPanel : Завершает обращение
+ManagerPanel -> DB : Помечает обращение\nкак закрытое
+ManagerPanel --> Manager : Показывает завершенное\nобращение
+
+opt Клиент оценивает работу менеджера
+  Client -> ClientCabinet : Выбирает оценку\nи оставляет комментарий
+  ClientCabinet -> DB : Сохраняет оценку\nзавершенного обращения
+  ClientCabinet --> Client : Показывает сохраненную\nоценку
+end
+
+@enduml

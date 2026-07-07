@@ -1,0 +1,169 @@
+%% ER-диаграмма построена по SQLAlchemy-моделям из app/models.
+%% Поля created_at и updated_at есть во всех моделях через TimestampMixin и опущены ради читаемости.
+%% Постоянный чат отчетов не является отдельной таблицей: это Conversation с conversation_type = "report_thread".
+erDiagram
+    User {
+        int id PK
+        string username UK
+        string email UK
+        string full_name
+        string role
+        string client_type
+        string hashed_password
+        bool is_active
+    }
+
+    ClientSession {
+        int id PK
+        int user_id FK
+        string client_name
+        string client_contact
+        string source
+        string status
+    }
+
+    Conversation {
+        int id PK
+        int client_session_id FK
+        string title
+        text summary
+        string status
+        string conversation_type
+        bool auto_reply_enabled
+        datetime client_last_read_at
+        datetime manager_last_read_at
+    }
+
+    Message {
+        int id PK
+        int conversation_id FK
+        string sender_type
+        string sender_display_name
+        text content
+    }
+
+    MessageAttachment {
+        int id PK
+        int message_id FK
+        int uploaded_by_user_id FK
+        string original_filename
+        string stored_filename
+        string stored_path
+        string content_type
+        int size_bytes
+    }
+
+    Appeal {
+        int id PK
+        int conversation_id FK
+        int category_id FK
+        int assigned_manager_id FK
+        string status
+        string emotional_tone
+        string request_category
+        string priority
+        bool auto_reply_enabled
+        text notes
+    }
+
+    Category {
+        int id PK
+        string slug UK
+        string name
+        text description
+        bool is_active
+    }
+
+    KnowledgeBaseItem {
+        int id PK
+        int category_id FK
+        string emotional_tone
+        string title
+        text content
+        bool is_active
+        int priority
+    }
+
+    SentimentAnalysis {
+        int id PK
+        int message_id FK
+        string emotional_tone
+        float confidence
+        text explanation
+    }
+
+    GeneratedResponse {
+        int id PK
+        int appeal_id FK
+        text response_text
+        string source
+        float confidence
+        string status
+    }
+
+    HandoverRequest {
+        int id PK
+        int appeal_id FK
+        text reason
+        string status
+    }
+
+    AdvertisingReport {
+        int id PK
+        int client_user_id FK
+        int appeal_id FK
+        int conversation_id FK
+        int uploaded_by_user_id FK
+        string title
+        text description
+        string original_filename
+        string stored_filename
+        string stored_path
+        string content_type
+        int size_bytes
+    }
+
+    AppealFeedback {
+        int id PK
+        int appeal_id FK
+        int client_user_id FK
+        int manager_user_id FK
+        int rating
+        text comment
+    }
+
+    AiResponseFeedback {
+        int id PK
+        int message_id FK
+        int appeal_id FK
+        int client_user_id FK
+        string value
+        string reason
+        text custom_reason
+    }
+
+    User ||--o{ ClientSession : "имеет"
+    ClientSession ||--o{ Conversation : "содержит"
+    Conversation ||--o{ Message : "содержит"
+    Conversation ||--o| Appeal : "обычное обращение"
+    Message ||--o| SentimentAnalysis : "анализируется"
+    Message ||--o{ MessageAttachment : "имеет вложения"
+    User ||--o{ MessageAttachment : "загрузил"
+
+    Category ||--o{ Appeal : "категоризирует"
+    Category ||--o{ KnowledgeBaseItem : "содержит"
+    User ||--o{ Appeal : "назначен менеджер"
+    Appeal ||--o{ GeneratedResponse : "имеет автоответы"
+    Appeal ||--o{ HandoverRequest : "имеет запросы передачи"
+
+    User ||--o{ AdvertisingReport : "клиент отчета"
+    User ||--o{ AdvertisingReport : "загрузил отчет"
+    Appeal ||--o{ AdvertisingReport : "может иметь отчет"
+    Conversation ||--o{ AdvertisingReport : "связан с чатом отчетов"
+
+    Appeal ||--o{ AppealFeedback : "оценивается клиентом"
+    User ||--o{ AppealFeedback : "клиент оставил"
+    User ||--o{ AppealFeedback : "менеджер получил"
+    Message ||--o{ AiResponseFeedback : "автоответ оценен"
+    Appeal ||--o{ AiResponseFeedback : "оценка в обращении"
+    User ||--o{ AiResponseFeedback : "клиент оценил"

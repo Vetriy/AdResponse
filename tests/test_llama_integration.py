@@ -39,8 +39,8 @@ def test_llama_failure_uses_local_fallback(monkeypatch) -> None:
         "settings",
         SimpleNamespace(
             use_llama=True,
-            llama_base_url="http://localhost:8080/v1/chat/completions",
-            llama_model_name="local-model",
+            llama_base_url="http://localhost:8080/v1",
+            llama_model_name="qwen2.5-adresponse",
             llama_timeout_seconds=1,
         ),
     )
@@ -68,8 +68,8 @@ def test_llama_success_uses_local_llama_source(monkeypatch) -> None:
         "settings",
         SimpleNamespace(
             use_llama=True,
-            llama_base_url="http://localhost:8080/v1/chat/completions",
-            llama_model_name="local-model",
+            llama_base_url="http://localhost:8080/v1",
+            llama_model_name="qwen2.5-adresponse",
             llama_timeout_seconds=1,
         ),
     )
@@ -97,3 +97,13 @@ def test_llama_client_rejects_non_local_endpoint() -> None:
         assert "local only" in str(error)
     else:
         raise AssertionError("Expected non-local llama endpoint to be rejected.")
+
+
+def test_llama_client_accepts_openai_compatible_base_url() -> None:
+    client = LlamaCppClient(
+        endpoint_url="http://localhost:8080/v1",
+        model_name="qwen2.5-adresponse",
+        timeout_seconds=1,
+    )
+
+    assert client.endpoint_url == "http://localhost:8080/v1/chat/completions"

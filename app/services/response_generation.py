@@ -1,9 +1,13 @@
+import logging
 from dataclasses import dataclass
 
 from app.core.config import settings
 from app.llama.client import LlamaClientError, LlamaCppClient
 from app.models import KnowledgeBaseItem, Message
 from app.services.prompt_builder import PromptContext, build_llama_messages
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -343,9 +347,12 @@ def generate_chat_response(
             )
         )
         llama_text = client.chat(messages)
+        if not llama_text.strip():
+            raise LlamaClientError("llama.cpp returned an empty response.")
     except LlamaClientError:
         return fallback
 
+    logger.info("Generated response with local llama.cpp model '%s'.", settings.llama_model_name)
     return GeneratedChatResponse(
         text=llama_text,
         clarifying_questions=fallback.clarifying_questions,

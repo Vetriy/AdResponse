@@ -16,10 +16,17 @@ class LlamaChatMessage:
 
 class LlamaCppClient:
     def __init__(self, endpoint_url: str, model_name: str, timeout_seconds: float) -> None:
-        self.endpoint_url = endpoint_url
+        self.endpoint_url = self._normalize_endpoint(endpoint_url)
         self.model_name = model_name
         self.timeout_seconds = timeout_seconds
         self._validate_local_endpoint()
+
+    def _normalize_endpoint(self, endpoint_url: str) -> str:
+        clean_url = endpoint_url.rstrip("/")
+        parsed = urlparse(clean_url)
+        if parsed.path.rstrip("/") == "/v1":
+            return f"{clean_url}/chat/completions"
+        return clean_url
 
     def _validate_local_endpoint(self) -> None:
         parsed = urlparse(self.endpoint_url)

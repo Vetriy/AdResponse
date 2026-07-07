@@ -45,9 +45,9 @@ class Settings:
     database_password: str = os.getenv("DATABASE_PASSWORD", "adresponse")
     database_url: str = build_database_url()
     use_llama: bool = read_bool("USE_LLAMA", False)
-    llama_base_url: str = os.getenv("LLAMA_BASE_URL", "http://localhost:8080/v1/chat/completions")
-    llama_model_name: str = os.getenv("LLAMA_MODEL_NAME", "local-model")
-    llama_timeout_seconds: float = float(os.getenv("LLAMA_TIMEOUT_SECONDS", "20"))
+    llama_base_url: str = os.getenv("LLAMA_BASE_URL", "http://localhost:8080/v1")
+    llama_model_name: str = os.getenv("LLAMA_MODEL_NAME", "qwen2.5-adresponse")
+    llama_timeout_seconds: float = float(os.getenv("LLAMA_TIMEOUT_SECONDS", "60"))
 
 
 settings = Settings()

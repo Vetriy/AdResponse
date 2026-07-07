@@ -1,0 +1,125 @@
+%% Диаграмма построена по реализованным маршрутам app/routers,
+%% сервисам app/services и шаблонам app/templates.
+flowchart LR
+    Client(["Клиент"])
+    Manager(["Менеджер"])
+    Admin(["Администратор"])
+
+    subgraph Account["Учетная запись"]
+        Login["Войти в систему"]
+        Logout["Выйти из системы"]
+    end
+
+    subgraph ClientArea["Кабинет клиента и обращения"]
+        ClientDashboard["Открыть кабинет клиента"]
+        NewAppeal["Создать новое обращение"]
+        ContinueAppeal["Продолжить свое обращение"]
+        AttachClientFile["Прикрепить файл к сообщению"]
+        ViewAppeal["Просмотреть историю обращения"]
+        RateAutoReply["Оценить автоответ"]
+        RateManager["Оценить завершенное обращение"]
+        ViewReports["Просмотреть отчеты по рекламе"]
+        AskReportQuestion["Задать вопрос в чате отчетов"]
+        DownloadReport["Скачать отчет"]
+    end
+
+    subgraph AutoProcessing["Автоматическая обработка обращения"]
+        SaveMessage["Сохранить сообщение и диалог"]
+        Classify["Определить категорию"]
+        DetectTone["Определить эмоциональный тон"]
+        SelectKnowledge["Выбрать подготовленные комментарии"]
+        GenerateAnswer["Сформировать автоответ"]
+        LocalLlama["Обратиться к локальному llama.cpp"]
+        Fallback["Использовать локальные правила"]
+        HandoverOffer["Предложить передачу менеджеру"]
+    end
+
+    subgraph ManagerArea["Панель менеджера"]
+        ViewDashboard["Просмотреть обращения"]
+        FilterAppeals["Фильтровать обращения"]
+        OpenAppeal["Открыть обращение"]
+        AcceptAppeal["Принять обращение"]
+        ToggleAppealAuto["Включить или выключить автоответы обращения"]
+        SendManual["Отправить ручной ответ"]
+        AttachManagerFile["Прикрепить файл к ответу"]
+        ChangeStatus["Изменить статус обращения"]
+        CloseAppeal["Завершить обращение"]
+        ViewClients["Просмотреть клиентов"]
+        ChangeClientType["Изменить тип клиента"]
+        UploadReport["Загрузить рекламный отчет"]
+        OpenReportThread["Открыть чат отчетов клиента"]
+        ToggleReportAuto["Включить или выключить автоответы чата отчетов"]
+    end
+
+    subgraph AdminArea["Администрирование"]
+        AdminDashboard["Просмотреть админ-аналитику"]
+        ManageUsers["Управлять пользователями"]
+        ManageCategories["Управлять категориями"]
+        ManageKnowledge["Управлять базой знаний"]
+        SearchKnowledge["Искать подготовленные комментарии"]
+        ViewAllAppeals["Просмотреть обращения и чаты отчетов"]
+        ViewRatings["Просмотреть рейтинги менеджеров"]
+    end
+
+    Client --> Login
+    Client --> Logout
+    Client --> ClientDashboard
+    Client --> NewAppeal
+    Client --> ContinueAppeal
+    Client --> AttachClientFile
+    Client --> ViewAppeal
+    Client --> RateAutoReply
+    Client --> RateManager
+    Client --> ViewReports
+    Client --> AskReportQuestion
+    Client --> DownloadReport
+
+    NewAppeal --> SaveMessage
+    ContinueAppeal --> SaveMessage
+    AskReportQuestion --> SaveMessage
+    SaveMessage --> Classify
+    SaveMessage --> DetectTone
+    Classify --> SelectKnowledge
+    DetectTone --> SelectKnowledge
+    SelectKnowledge --> GenerateAnswer
+    GenerateAnswer --> LocalLlama
+    GenerateAnswer --> Fallback
+    GenerateAnswer --> HandoverOffer
+
+    Manager --> Login
+    Manager --> Logout
+    Manager --> ViewDashboard
+    Manager --> FilterAppeals
+    Manager --> OpenAppeal
+    Manager --> AcceptAppeal
+    Manager --> ToggleAppealAuto
+    Manager --> SendManual
+    Manager --> AttachManagerFile
+    Manager --> ChangeStatus
+    Manager --> CloseAppeal
+    Manager --> ViewClients
+    Manager --> ChangeClientType
+    Manager --> UploadReport
+    Manager --> OpenReportThread
+    Manager --> ToggleReportAuto
+
+    Admin --> Login
+    Admin --> Logout
+    Admin --> AdminDashboard
+    Admin --> ManageUsers
+    Admin --> ManageCategories
+    Admin --> ManageKnowledge
+    Admin --> SearchKnowledge
+    Admin --> ViewAllAppeals
+    Admin --> ViewDashboard
+    Admin --> OpenAppeal
+    Admin --> OpenReportThread
+    Admin --> ViewRatings
+
+    AcceptAppeal --> ToggleAppealAuto
+    SendManual --> ChangeStatus
+    CloseAppeal --> RateManager
+    UploadReport --> OpenReportThread
+    UploadReport --> ViewReports
+    ManageKnowledge --> SelectKnowledge
+    ManageCategories --> Classify
